@@ -38,12 +38,22 @@ const IMPORT_KEY_ROUTES = [
 function import_key_user(): ?array
 {
     $sent = (string)($_SERVER['HTTP_X_IMPORT_TOKEN'] ?? '');
-    $key = (string)(config()['import_token'] ?? '');
-    if ($sent === '' || strlen($key) < 32 || !hash_equals($key, $sent)) {
+    if ($sent === '') {
         return null;
     }
+    // Why a sent key was refused, added to the 401 so a mis-set key can be told apart from a wrong one.
+    $key = (string)(config()['import_token'] ?? '');
     $route = ($_SERVER['REQUEST_METHOD'] ?? 'GET') . ' ' . trim((string)($_GET['r'] ?? ''), '/');
+    if (strlen($key) < 32) {
+        $GLOBALS['import_key_refusal'] = $key === '' ? 'import key not set on the server' : 'import key on the server is shorter than 32 characters';
+        return null;
+    }
+    if (!hash_equals($key, $sent)) {
+        $GLOBALS['import_key_refusal'] = 'import key does not match';
+        return null;
+    }
     if (!in_array($route, IMPORT_KEY_ROUTES, true)) {
+        $GLOBALS['import_key_refusal'] = 'import key is not allowed for this action';
         return null;
     }
     $id = scalar("SELECT id FROM users WHERE role = 'admin' AND is_active = 1 ORDER BY id LIMIT 1");
@@ -79,7 +89,7 @@ function require_user(string $minRole = 'viewer'): array
 {
     $u = current_user();
     if (!$u) {
-        fail(401, 'يجب تسجيل الدخول');
+        fail(401, 'يجب تسجيل الدخول', isset($GLOBALS['import_key_refusal']) ? ['import_key' => $GLOBALS['import_key_refusal']] : []);
     }
     if (ROLE_RANK[$u['role']] < ROLE_RANK[$minRole]) {
         fail(403, 'ليست لديك صلاحية لهذا الإجراء');

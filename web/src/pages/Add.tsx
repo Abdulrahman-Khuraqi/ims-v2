@@ -250,7 +250,7 @@ function ImportPanel() {
 
   return (
     <div className="space-y-4">
-      <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" multiple hidden onChange={(e) => pick(e.target.files)} />
+      <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv,.tsv,.txt,text/csv" multiple hidden onChange={(e) => pick(e.target.files)} />
 
       {stage === 'pick' && (
         <>
@@ -267,8 +267,8 @@ function ImportPanel() {
             <span className="flex size-16 items-center justify-center rounded-3xl bg-primary text-primary-fg">
               <Upload className="size-8" />
             </span>
-            <span className="mt-4 text-[18px] font-bold">{parsing ? 'جاري قراءة الملفات…' : 'اختر ملفات Excel'}</span>
-            <span className="mt-1 max-w-xs text-[15px] text-muted">ملفات بوابة الدفع (Checkouts Paid) أو قالب النظام. يمكنك اختيار أكثر من ملف</span>
+            <span className="mt-4 text-[18px] font-bold">{parsing ? 'جاري قراءة الملفات…' : 'اختر ملفات Excel أو CSV'}</span>
+            <span className="mt-1 max-w-xs text-[15px] text-muted">ملفات بوابة الدفع (Checkouts Paid)، ملفات المدفوعات (Checkout ID)، أو قالب النظام — Excel أو CSV. يمكنك اختيار أكثر من ملف</span>
           </button>
           <Card>
             <div className="flex items-start gap-3">
@@ -296,7 +296,7 @@ function ImportPanel() {
                     {f.fileName}
                   </p>
                   <p className="text-[13px] text-muted">
-                    <span className="num">{f.rows.length}</span> فاتورة · {f.format === 'gateway' ? 'ملف بوابة الدفع' : 'قالب النظام'}
+                    <span className="num">{f.rows.length}</span> فاتورة · {f.format === 'gateway' ? 'ملف بوابة الدفع' : f.format === 'payments' ? 'ملف المدفوعات' : 'قالب النظام'}
                   </p>
                   {f.errors.slice(0, 3).map((e) => (
                     <p key={e} className="text-[13px] text-danger">

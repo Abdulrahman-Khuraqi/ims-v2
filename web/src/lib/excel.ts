@@ -27,7 +27,7 @@ export interface ParsedRow {
 
 export interface ParsedFile {
   fileName: string
-  format: 'gateway' | 'template'
+  format: 'gateway' | 'template' | 'payments'
   rows: ParsedRow[]
   errors: string[]
 }
@@ -54,19 +54,69 @@ const TEMPLATE_COLUMNS = {
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
+const fmtLocal = (d: Date) =>
+  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+
+/** Saudi time (UTC+3, no DST) of an absolute instant, as "YYYY-MM-DD HH:MM:SS". */
+const fmtRiyadh = (d: Date) => fmtLocal(new Date(d.getTime() + 3 * 3600_000 + d.getTimezoneOffset() * 60_000))
+
+/** "2:30 PM" / "14:30" / "2:30 م" → [hours, minutes, seconds] in 24h. */
+function parseTime(h: string | undefined, m: string | undefined, s: string | undefined, ampm: string | undefined): [number, number, number] {
+  let hh = +(h ?? 0)
+  const p = ampm?.toLowerCase()
+  if ((p === 'pm' || p === 'م') && hh < 12) hh += 12
+  if ((p === 'am' || p === 'ص') && hh === 12) hh = 0
+  return [hh, +(m ?? 0), +(s ?? 0)]
+}
+
+const TIME = String.raw`(?:[ T,]+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?\s*(AM|PM|am|pm|ص|م)?)?`
+
+/** Excel serial day number (e.g. 46336.48) → "YYYY-MM-DD HH:MM:SS", for date cells saved without a date format. */
+function serialDate(n: number): string {
+  const d = new Date(Math.round((n - 25569) * 86400) * 1000)
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`
+}
+
 function cellDate(v: unknown): string | null {
-  if (v instanceof Date && !isNaN(v.getTime())) {
-    return `${v.getFullYear()}-${pad(v.getMonth() + 1)}-${pad(v.getDate())} ${pad(v.getHours())}:${pad(v.getMinutes())}:${pad(v.getSeconds())}`
+  if (v instanceof Date && !isNaN(v.getTime())) return fmtLocal(v)
+  if (typeof v === 'number' && v > 20000 && v < 80000) return serialDate(v)
+  if (typeof v !== 'string') return null
+  const s = toLatinDigits(v.trim())
+  if (!s) return null
+  // ISO with a time zone (e.g. 2026-11-10T11:30:00Z or +03:00): convert to Saudi time.
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}.*(Z|[+-]\d{2}:?\d{2})$/.test(s)) {
+    const d = new Date(s)
+    if (!isNaN(d.getTime())) return fmtRiyadh(d)
   }
-  if (typeof v === 'string') {
-    const s = toLatinDigits(v.trim())
-    let m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/)
-    if (m) return `${m[1]}-${pad(+m[2])}-${pad(+m[3])} ${pad(+(m[4] ?? 0))}:${m[5] ?? '00'}:${m[6] ?? '00'}`
-    // Day-first dates as typed in Saudi Arabia: 20/10/2026
-    m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:\s+(\d{1,2}):(\d{2}))?/)
-    if (m) return `${m[3]}-${pad(+m[2])}-${pad(+m[1])} ${pad(+(m[4] ?? 0))}:${m[5] ?? '00'}:00`
+  let m = s.match(new RegExp(String.raw`^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})` + TIME))
+  if (m) {
+    const [hh, mm, ss] = parseTime(m[4], m[5], m[6], m[7])
+    return `${m[1]}-${pad(+m[2])}-${pad(+m[3])} ${pad(hh)}:${pad(mm)}:${pad(ss)}`
+  }
+  // Day-first dates as typed in Saudi Arabia: 20/10/2026
+  m = s.match(new RegExp(String.raw`^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})` + TIME))
+  if (m) {
+    const [hh, mm, ss] = parseTime(m[4], m[5], m[6], m[7])
+    return `${m[3]}-${pad(+m[2])}-${pad(+m[1])} ${pad(hh)}:${pad(mm)}:${pad(ss)}`
+  }
+  // English month names: "Nov 10, 2026 2:30 PM", "10 November 2026 14:30"
+  if (/[a-z]{3}/i.test(s)) {
+    const d = new Date(s.replace(/\bat\b/i, ' '))
+    if (!isNaN(d.getTime()) && d.getFullYear() > 2000) return fmtLocal(d)
   }
   return null
+}
+
+/** Joins a separate date cell and time cell ("2026-11-10" + "2:30 PM"). */
+function cellDateTime(date: unknown, time: unknown): string | null {
+  const d = cellDate(date)
+  if (!d) return null
+  if (time instanceof Date && !isNaN(time.getTime())) return `${d.slice(0, 10)} ${pad(time.getHours())}:${pad(time.getMinutes())}:${pad(time.getSeconds())}`
+  if (typeof time === 'number' && time >= 0 && time < 1) return `${d.slice(0, 10)} ${serialDate(25569 + time).slice(11)}`
+  const t = typeof time === 'string' ? toLatinDigits(time.trim()).match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|am|pm|ص|م)?/) : null
+  if (!t) return d
+  const [hh, mm, ss] = parseTime(t[1], t[2], t[3], t[4])
+  return `${d.slice(0, 10)} ${pad(hh)}:${pad(mm)}:${pad(ss)}`
 }
 
 function toLatinDigits(s: string) {
@@ -76,7 +126,10 @@ function toLatinDigits(s: string) {
 function cellMoney(v: unknown): number | null {
   if (typeof v === 'number') return Math.round(v * 100) / 100
   if (typeof v === 'string') {
-    const n = parseFloat(toLatinDigits(v).replace(/[^\d.\-]/g, ''))
+    let s = toLatinDigits(v).replace(/[^\d.,\-]/g, '')
+    // Decimal comma ("1200,50" or "1.200,50"); "1,500" with three digits after the comma stays thousands.
+    if (/^-?\d{1,3}(\.\d{3})*,\d{1,2}$|^-?\d+,\d{1,2}$/.test(s)) s = s.replace(/\./g, '').replace(',', '.')
+    const n = parseFloat(s.replace(/,/g, ''))
     return isNaN(n) ? null : Math.round(n * 100) / 100
   }
   return null
@@ -108,12 +161,37 @@ export async function parseExcelFile(file: File): Promise<ParsedFile> {
   return parseWorkbook(await file.arrayBuffer(), file.name)
 }
 
+/** Decodes CSV bytes: UTF-8 (with or without BOM), falling back to Windows-1256 for Arabic files saved by old Excel. */
+function decodeText(bytes: Uint8Array): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes).replace(/^\uFEFF/, '')
+  } catch {
+    return new TextDecoder('windows-1256').decode(bytes)
+  }
+}
+
+/** Picks the separator that appears most in the header line: comma, tab or semicolon. */
+function sniffSeparator(text: string): string {
+  const header = text.split(/\r?\n/, 1)[0] ?? ''
+  const count = (c: string) => header.split(c).length - 1
+  return ['\t', ';', ','].reduce((best, c) => (count(c) > count(best) ? c : best), ',')
+}
+
 export function parseWorkbook(data: ArrayBuffer | Uint8Array, fileName: string): ParsedFile {
-  const wb = XLSX.read(data, { type: 'array', cellDates: true })
+  const bytes = data instanceof Uint8Array ? data : new Uint8Array(data)
+  const isText = /\.(csv|tsv|txt)$/i.test(fileName)
+  let wb: XLSX.WorkBook
+  if (isText) {
+    // Text files: keep every cell as typed (long ids stay exact, dates are parsed by us, not guessed).
+    const text = decodeText(bytes)
+    wb = XLSX.read(text, { type: 'string', raw: true, FS: sniffSeparator(text) })
+  } else {
+    wb = XLSX.read(bytes, { type: 'array', cellDates: true })
+  }
   const sheet = wb.Sheets[wb.SheetNames[0]]
   if (!sheet) return { fileName, format: 'gateway', rows: [], errors: ['الملف فارغ'] }
   const records = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null, raw: true })
-  const headers = Object.keys(records[0] ?? {})
+  const headers = Object.keys(records[0] ?? {}).map((h) => h.trim())
 
   if (headers.includes('TransactionID') && headers.includes('TotalAmount')) {
     return parseGateway(records, fileName)
@@ -121,12 +199,101 @@ export function parseWorkbook(data: ArrayBuffer | Uint8Array, fileName: string):
   if (headers.includes(TEMPLATE_COLUMNS.amount) && headers.includes(TEMPLATE_COLUMNS.date)) {
     return parseTemplate(records, fileName)
   }
+  const keys = new Set(headers.map(headerKey))
+  if (keys.has('amount') && (keys.has('checkoutid') || (keys.has('reference') && (keys.has('paidat') || keys.has('date'))))) {
+    return parsePayments(records, fileName)
+  }
   return {
     fileName,
     format: 'gateway',
     rows: [],
-    errors: ['صيغة الملف غير معروفة. استخدم ملف بوابة الدفع (Checkouts) أو قالب Excel الخاص بالنظام'],
+    errors: ['صيغة الملف غير معروفة. استخدم ملف بوابة الدفع (Checkouts) أو ملف المدفوعات (Checkout ID) أو قالب Excel الخاص بالنظام'],
   }
+}
+
+/** "Card last 4" → "cardlast4": header names compared without case, spaces or punctuation. */
+const headerKey = (h: string) => h.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+/** Payment method names from payment pages → the app's codes (anything else is kept as written). */
+function payMethodCode(v: string | null): string | null {
+  if (!v) return null
+  const k = v.toLowerCase().replace(/[\s_-]/g, '')
+  if (k.includes('applepay')) return 'ApplePay'
+  if (k.includes('samsungpay')) return 'SamsungPay'
+  if (k.includes('mada') || v.includes('مدى')) return 'Mada'
+  if (/^(card|creditcard|debitcard|visa|mastercard|master|amex|americanexpress|cc)$/.test(k)) return 'Card'
+  if (k.includes('cash') || v.includes('نقد')) return 'Cash'
+  if (k.includes('transfer') || k.includes('bank') || v.includes('تحويل')) return 'Transfer'
+  return v
+}
+
+/**
+ * Payments export with the columns:
+ * Date, Time, Reference, Name, Email, Amount, Currency, Status, Mode, Gateway, Method, Card last 4, Services, Paid at, Checkout ID
+ * The store is chosen on the import screen (the file has no store column); "Services" is matched to the catalog.
+ */
+function parsePayments(records: Record<string, unknown>[], fileName: string): ParsedFile {
+  const rows: ParsedRow[] = []
+  const errors: string[] = []
+  let testRows = 0
+  records.forEach((raw, i) => {
+    const r: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(raw)) r[headerKey(k)] = typeof v === 'string' ? v.trim() : v
+    if (!Object.values(r).some((v) => v !== null && v !== '')) return
+
+    // Test-mode payments are not real money.
+    const mode = cellStr(r.mode)?.toLowerCase()
+    if (mode && /test|sandbox|تجريب/.test(mode)) {
+      testRows++
+      return
+    }
+    const amount = cellMoney(r.amount)
+    const created = cellDateTime(r.date, r.time)
+    const paid = cellDate(r.paidat) ?? created
+    if (amount === null || !paid) {
+      errors.push(`الصف ${i + 2}: المبلغ والتاريخ مطلوبان`)
+      return
+    }
+    const reference = cellStr(r.reference)
+    const name = cellStr(r.name)
+    const email = cellStr(r.email)
+    const services = (cellStr(r.services) ?? '')
+      .split(/\s*[,،;|]\s*|\n/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+    const currency = cellStr(r.currency)?.toUpperCase()
+    const notes = [
+      services.length > 1 ? `الخدمات: ${services.join('، ')}` : null,
+      currency && currency !== 'SAR' ? `العملة: ${currency}` : null,
+      cellStr(r.gateway) ? `بوابة الدفع: ${cellStr(r.gateway)}` : null,
+    ].filter(Boolean)
+    const digits = cellStr(r.cardlast4)?.replace(/\D/g, '').slice(-4) || null
+    // Excel may store "0042" as the number 42.
+    const last4 = digits && typeof r.cardlast4 === 'number' ? digits.padStart(4, '0') : digits
+
+    rows.push({
+      transaction_id: cellStr(r.checkoutid) ?? reference ?? rowFingerprint(['pay', paid, amount, name, email]),
+      invoice_no: null,
+      customer_name: name,
+      email,
+      phone: cellStr(r.phone),
+      amount,
+      status: cellStr(r.status) ?? 'Paid',
+      pay_method: payMethodCode(cellStr(r.method)),
+      card_type: null,
+      card_last4: last4,
+      terminal_id: null,
+      reference_no: reference,
+      auth_code: null,
+      created_at_src: created,
+      paid_at: paid,
+      store_name: null,
+      item_name: services[0] ?? null,
+      note: notes.length ? notes.join(' · ') : null,
+    })
+  })
+  if (testRows) errors.push(`تم تجاهل ${testRows} عملية تجريبية (Mode: test)`)
+  return { fileName, format: 'payments', rows, errors }
 }
 
 function parseGateway(records: Record<string, unknown>[], fileName: string): ParsedFile {

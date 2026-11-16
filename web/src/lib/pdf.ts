@@ -38,7 +38,7 @@ export async function exportInvoicesPdf(
       await Promise.all([...page.querySelectorAll('img')].map((img) => img.decode().catch(() => undefined)))
       // Font CSS is collected once and reused for every page (it is the slow part of html-to-image).
       fontEmbedCSS ??= await getFontEmbedCSS(page)
-      const image = await toJpeg(page, { quality: 0.92, pixelRatio: 2, backgroundColor: '#ffffff', fontEmbedCSS })
+      const image = await toJpeg(page, { quality: 0.85, pixelRatio: 1.6, backgroundColor: '#ffffff', fontEmbedCSS })
 
       // Fit the page width; a very long invoice is scaled down to stay on one page.
       const h = page.offsetHeight || A4_HEIGHT

@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import type { Invoice, InvoiceSettings } from '../types'
-import { fmtDate, fmtDateTime, money } from '../lib/format'
+import { fmtDate, fmtDateTime, money, payLabel } from '../lib/format'
 
 /** A4 at 96 dpi. The PDF export renders one of these per page. */
 export const A4_WIDTH = 794
@@ -32,7 +32,8 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
   const total = invoice.amount
   const subtotal = vatRate > 0 ? total / (1 + vatRate / 100) : total
   const vat = total - subtotal
-  const number = invoice.invoice_no || `INV-${String(invoice.id).padStart(5, '0')}`
+  // Imported payments have no invoice number; their order reference (e.g. DXL261114-JTJDTV) is the customer-facing one.
+  const number = invoice.invoice_no || invoice.reference_no || `INV-${String(invoice.id).padStart(5, '0')}`
   const website = settings?.website?.replace(/^https?:\/\//i, '').replace(/\/$/, '')
   const card = [invoice.card_type, invoice.card_last4 ? `•••• ${invoice.card_last4}` : null].filter(Boolean).join(' ')
 
@@ -44,14 +45,16 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
   ].filter(Boolean)
 
   const meta: [string, string, ReactNode][] = [
-    ['رقم الفاتورة', 'Invoice No', <Num>{number}</Num>],
-    ['تاريخ الفاتورة', 'Date', fmtDate(invoice.paid_at ?? invoice.created_at)],
+    ['رقم الفاتورة', 'Invoice No', <Num style={{ whiteSpace: 'nowrap' }}>{number}</Num>],
+    ['تاريخ الفاتورة', 'Date', <span style={{ whiteSpace: 'nowrap' }}>{fmtDate(invoice.paid_at ?? invoice.created_at)}</span>],
   ]
-  if (invoice.transaction_id) meta.push(['رقم العملية', 'Transaction', <Num>{invoice.transaction_id}</Num>])
-  if (invoice.reference_no) meta.push(['الرقم المرجعي', 'Reference', <Num>{invoice.reference_no}</Num>])
+  if (invoice.reference_no && invoice.reference_no !== number) meta.push(['الرقم المرجعي', 'Reference', <Num style={{ whiteSpace: 'nowrap' }}>{invoice.reference_no}</Num>])
+  // Gateway ids can be 32+ characters: smaller and allowed to wrap anywhere.
+  if (invoice.transaction_id && !invoice.transaction_id.startsWith('tpl-'))
+    meta.push(['رقم العملية', 'Transaction', <Num style={{ fontSize: 11, fontWeight: 500, wordBreak: 'break-all' }}>{invoice.transaction_id}</Num>])
 
   const payment: [string, string, ReactNode][] = []
-  if (invoice.pay_method) payment.push(['طريقة الدفع', 'Method', invoice.pay_method])
+  if (invoice.pay_method) payment.push(['طريقة الدفع', 'Method', payLabel(invoice.pay_method)])
   if (card) payment.push(['البطاقة', 'Card', <Num>{card}</Num>])
   if (invoice.auth_code) payment.push(['رمز التفويض', 'Auth code', <Num>{invoice.auth_code}</Num>])
   payment.push(['وقت الدفع', 'Paid at', fmtDateTime(invoice.paid_at ?? invoice.created_at)])
@@ -119,7 +122,7 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
         </div>
 
         {/* Invoice meta */}
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${meta.length}, 1fr)`, gap: 16, marginTop: 32, padding: '16px 20px', background: SOFT, borderRadius: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `${'auto '.repeat(meta.length - 1)}minmax(0, 1fr)`, gap: 28, marginTop: 32, padding: '16px 20px', background: SOFT, borderRadius: 14 }}>
           {meta.map(([ar, en, v]) => (
             <div key={en}>
               <Label ar={ar} en={en} />

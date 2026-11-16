@@ -214,6 +214,17 @@ export function parseWorkbook(data: ArrayBuffer | Uint8Array, fileName: string):
 /** "Card last 4" → "cardlast4": header names compared without case, spaces or punctuation. */
 const headerKey = (h: string) => h.toLowerCase().replace(/[^a-z0-9]/g, '')
 
+/** Card brand from the method column ("Visa", "MasterCard", "Mada"…), shown next to the last 4 digits. */
+function cardBrand(v: string | null): string | null {
+  if (!v) return null
+  const k = v.toLowerCase().replace(/[\s_-]/g, '')
+  if (k.includes('visa')) return 'Visa'
+  if (k.includes('master')) return 'MasterCard'
+  if (k.includes('amex') || k.includes('americanexpress')) return 'American Express'
+  if (k.includes('mada') || v.includes('مدى')) return 'mada'
+  return null
+}
+
 /** Payment method names from payment pages → the app's codes (anything else is kept as written). */
 function payMethodCode(v: string | null): string | null {
   if (!v) return null
@@ -262,11 +273,12 @@ function parsePayments(records: Record<string, unknown>[], fileName: string): Pa
       .map((s) => s.trim())
       .filter(Boolean)
     const currency = cellStr(r.currency)?.toUpperCase()
+    // The note prints on PDF invoices, so it only carries what the invoice can't show elsewhere.
     const notes = [
       services.length > 1 ? `الخدمات: ${services.join('، ')}` : null,
       currency && currency !== 'SAR' ? `العملة: ${currency}` : null,
-      cellStr(r.gateway) ? `بوابة الدفع: ${cellStr(r.gateway)}` : null,
     ].filter(Boolean)
+    const method = cellStr(r.method)
     const digits = cellStr(r.cardlast4)?.replace(/\D/g, '').slice(-4) || null
     // Excel may store "0042" as the number 42.
     const last4 = digits && typeof r.cardlast4 === 'number' ? digits.padStart(4, '0') : digits
@@ -279,8 +291,8 @@ function parsePayments(records: Record<string, unknown>[], fileName: string): Pa
       phone: cellStr(r.phone),
       amount,
       status: cellStr(r.status) ?? 'Paid',
-      pay_method: payMethodCode(cellStr(r.method)),
-      card_type: null,
+      pay_method: payMethodCode(method),
+      card_type: cardBrand(method),
       card_last4: last4,
       terminal_id: null,
       reference_no: reference,

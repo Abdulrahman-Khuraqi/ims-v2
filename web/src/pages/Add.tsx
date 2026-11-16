@@ -157,6 +157,12 @@ function ImportPanel() {
       const parsed = await Promise.all([...list].map((f) => parseExcelFile(f).catch(() => ({ fileName: f.name, format: 'gateway' as const, rows: [], errors: ['تعذّرت قراءة الملف'] }))))
       const merged = [...files, ...parsed.filter((p) => !files.some((f) => f.fileName === p.fileName))]
       setFiles(merged)
+      // "dexel-payments.csv" → DEXEL as the default store, when every file names the same store.
+      if (!fallbackStore) {
+        const named = new Set(merged.map((f) => activeStores.find((s) => norm(f.fileName).includes(norm(s.name)))?.id))
+        const [only] = [...named]
+        if (named.size === 1 && only) setFallbackStore(String(only))
+      }
       const ids = merged.flatMap((f) => f.rows.map((r) => r.transaction_id))
       const r = await api<{ existing: string[] }>('import/check', { method: 'POST', body: { transaction_ids: ids } })
       setExisting(new Set(r.existing))

@@ -22,15 +22,15 @@
 
    | الاسم | القيمة |
    |---|---|
-   | `FTP_SERVER` | `82.198.230.29` (بدون ftp://) |
-   | `FTP_USERNAME` | `u122068939.ms` |
+   | `FTP_SERVER` | عنوان IP لخادم FTP من hPanel ← Files ← FTP Accounts (بدون ftp://) |
+   | `FTP_USERNAME` | اسم مستخدم حساب FTP الذي يشير إلى مجلد الدومين `ims.brxelo.com` |
    | `FTP_PASSWORD` | كلمة مرور حساب FTP |
-   | `DB_NAME` | اسم قاعدة البيانات، مثل `u122068939_invoices` |
-   | `DB_USER` | اسم مستخدم قاعدة البيانات |
+   | `DB_NAME` | اسم قاعدة البيانات كاملاً مع البادئة، مثل `u123456789_invoices` |
+   | `DB_USER` | اسم مستخدم قاعدة البيانات كاملاً مع البادئة |
    | `DB_PASS` | كلمة مرور مستخدم قاعدة البيانات |
 
 5. **النشر**: أي دفع (push) إلى فرع `main` ينشر تلقائياً. ويمكن التشغيل يدوياً من تبويب Actions ← Deploy to Hostinger ← Run workflow.
-6. افتح `https://ms.asrixsa.com/` وأنشئ حساب المدير، ثم ارفع ملفات Excel من «إضافة ← استيراد Excel».
+6. افتح `https://ims.brxelo.com/` وأنشئ حساب المدير، ثم ارفع ملفات Excel من «إضافة ← استيراد Excel».
 
 الجداول تُنشأ تلقائياً عند أول طلب (أو يدوياً عبر phpMyAdmin باستيراد `api/migrations/001_init.sql`).
 

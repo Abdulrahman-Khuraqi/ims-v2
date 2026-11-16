@@ -243,7 +243,7 @@ function ImportPanel() {
           )}
         </p>
         <div className="mt-6 space-y-3">
-          <Button block size="lg" onClick={() => navigate('/invoices?unclassified=1&source=import')}>
+          <Button block size="lg" onClick={() => navigate('/classify')}>
             حدد الخدمة/المنتج للفواتير الجديدة
           </Button>
           <Button block variant="secondary" onClick={reset}>

@@ -73,7 +73,7 @@ export default function Home() {
 
             {stats.unclassified > 0 && (
               <button
-                onClick={() => navigate(`/invoices?unclassified=1${rangeQuery()}`)}
+                onClick={() => navigate(can('editor') ? '/classify' : `/invoices?unclassified=1${rangeQuery()}`)}
                 className="mt-3 flex w-full items-center gap-3 rounded-3xl border border-warn/30 bg-warn-soft p-4 text-start transition active:scale-[0.99]"
               >
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-warn text-white">
@@ -83,7 +83,7 @@ export default function Home() {
                   <span className="block text-[17px] font-bold text-warn">
                     <span className="num">{stats.unclassified}</span> فاتورة غير مصنّفة
                   </span>
-                  <span className="text-[14px] text-warn/80">حدد الخدمة أو المنتج لكل فاتورة</span>
+                  <span className="text-[14px] text-warn/80">{can('editor') ? 'تصنيف سريع: اضغط الخدمات واحفظ' : 'حدد الخدمة أو المنتج لكل فاتورة'}</span>
                 </span>
                 <ChevronLeft className="size-6 text-warn" />
               </button>

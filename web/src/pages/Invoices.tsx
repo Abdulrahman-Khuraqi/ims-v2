@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { ArrowLeftRight, CalendarDays, CheckSquare, Download, FileText, SlidersHorizontal, Tag, Trash2, X, Search } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { ArrowLeftRight, CalendarDays, CheckSquare, ChevronLeft, Download, FileText, SlidersHorizontal, Tag, Trash2, X, Search, Zap } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'
 import { useFeedback } from '../components/Feedback'
@@ -18,6 +18,7 @@ const FILTER_KEYS = ['unclassified', 'item', 'kind', 'category', 'range', 'from'
 
 export default function Invoices() {
   const { currentStore, items, categories, can, activeStores } = useApp()
+  const navigate = useNavigate()
   const { toast, confirm } = useFeedback()
   const [params, setParams] = useSearchParams()
   const [q, setQ] = useState(params.get('q') ?? '')
@@ -208,6 +209,20 @@ export default function Invoices() {
               المجموع <Money value={data.sum} className="font-bold text-fg" />
             </span>
           </div>
+        )}
+
+        {can('editor') && params.get('unclassified') === '1' && !!data?.total && !loading && (
+          <button
+            onClick={() => navigate('/classify')}
+            className="mb-3 flex w-full items-center gap-3 rounded-3xl bg-primary p-4 text-start text-primary-fg shadow-lg shadow-primary/20 transition active:scale-[0.99]"
+          >
+            <Zap className="size-6 shrink-0" />
+            <span className="flex-1">
+              <span className="block text-[16px] font-bold">تصنيف سريع</span>
+              <span className="text-[13px] opacity-90">فاتورة فاتورة: اضغط الخدمات واحفظ، والمبلغ يتوزع تلقائياً</span>
+            </span>
+            <ChevronLeft className="size-5" />
+          </button>
         )}
 
         {loading && <PageLoader />}

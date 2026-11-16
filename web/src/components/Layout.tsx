@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { BarChart3, Check, ChevronDown, ChevronRight, FileText, Home, Plus, Settings, Store as StoreIcon, WifiOff } from 'lucide-react'
 import { useApp } from '../context'
 import { Sheet } from './Sheet'
@@ -15,6 +15,8 @@ const NAV = [
 
 export function BottomNav() {
   const { can } = useApp()
+  // Quick classify is a focus mode with its own action bar at the bottom.
+  if (useLocation().pathname === '/classify') return null
   return (
     <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur-md">
       <div className="mx-auto flex max-w-2xl items-end justify-around px-2">

@@ -5,6 +5,7 @@ import { AppProvider, useApp } from './context'
 import { BottomNav, OfflineBanner } from './components/Layout'
 import { Button, PageLoader } from './components/ui'
 import Add from './pages/Add'
+import Classify from './pages/Classify'
 import Home from './pages/Home'
 import Invoices from './pages/Invoices'
 import { Login, Setup } from './pages/Login'
@@ -79,6 +80,7 @@ function AppRoutes() {
       <Route path="/" element={<Home />} />
       <Route path="/invoices" element={<Invoices />} />
       <Route path="/add" element={can('editor') ? <Add /> : <Navigate to="/" replace />} />
+      <Route path="/classify" element={can('editor') ? <Classify /> : <Navigate to="/invoices?unclassified=1" replace />} />
       <Route path="/reports" element={<Reports />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/settings/catalog" element={<CatalogSettings />} />

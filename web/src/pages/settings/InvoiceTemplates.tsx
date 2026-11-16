@@ -129,6 +129,7 @@ function TemplateSheet({ settings, onClose, onSaved }: { settings: InvoiceSettin
     legal_name: settings.legal_name ?? '',
     tax_number: settings.tax_number ?? '',
     cr_number: settings.cr_number ?? '',
+    freelance_no: settings.freelance_no ?? '',
     address: settings.address ?? '',
     phone: settings.phone ?? '',
     email: settings.email ?? '',
@@ -185,6 +186,9 @@ function TemplateSheet({ settings, onClose, onSaved }: { settings: InvoiceSettin
               <Input value={f.cr_number} onChange={set('cr_number')} inputMode="numeric" dir="ltr" className="num" />
             </Field>
           </div>
+          <Field label="وثيقة العمل الحر" hint="تظهر في معلومات الشركة في الفاتورة">
+            <Input value={f.freelance_no} onChange={set('freelance_no')} placeholder="FL-000000000" dir="ltr" className="num" autoCapitalize="characters" />
+          </Field>
           <Field label="نسبة ضريبة القيمة المضافة ٪" hint="اتركها فارغة إذا لم تكن مسجلاً في الضريبة. المبالغ تُعتبر شاملة الضريبة.">
             <Input value={f.vat_rate} onChange={set('vat_rate')} inputMode="decimal" placeholder="مثال: 15" dir="ltr" className="num" />
           </Field>

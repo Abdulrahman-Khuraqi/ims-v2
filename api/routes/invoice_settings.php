@@ -10,7 +10,7 @@ function invoice_settings_list(): void
     [$scope, $params] = store_scope_sql($u, 's.id');
     $rows = all(
         "SELECT s.id AS store_id, s.name AS store_name, s.color AS store_color, s.website,
-                t.logo, t.seal, t.legal_name, t.tax_number, t.cr_number, t.address, t.phone, t.email,
+                t.logo, t.seal, t.legal_name, t.tax_number, t.cr_number, t.freelance_no, t.address, t.phone, t.email,
                 t.accent_color, COALESCE(t.vat_rate, 0) AS vat_rate, t.footer_note
          FROM stores s LEFT JOIN store_invoice_settings t ON t.store_id = s.id
          WHERE $scope ORDER BY s.is_active DESC, s.sort, s.id",
@@ -59,16 +59,17 @@ function invoice_settings_save(string $storeId): void
 
     q(
         'INSERT INTO store_invoice_settings
-            (store_id, logo, seal, legal_name, tax_number, cr_number, address, phone, email, accent_color, vat_rate, footer_note)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (store_id, logo, seal, legal_name, tax_number, cr_number, freelance_no, address, phone, email, accent_color, vat_rate, footer_note)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE logo = VALUES(logo), seal = VALUES(seal), legal_name = VALUES(legal_name), tax_number = VALUES(tax_number),
-            cr_number = VALUES(cr_number), address = VALUES(address), phone = VALUES(phone), email = VALUES(email),
+            cr_number = VALUES(cr_number), freelance_no = VALUES(freelance_no), address = VALUES(address), phone = VALUES(phone), email = VALUES(email),
             accent_color = VALUES(accent_color), vat_rate = VALUES(vat_rate), footer_note = VALUES(footer_note)',
         [
             (int)$storeId, $logo, $seal,
             str_in($b['legal_name'] ?? null, 160),
             str_in($b['tax_number'] ?? null, 40),
             str_in($b['cr_number'] ?? null, 40),
+            str_in($b['freelance_no'] ?? null, 40),
             str_in($b['address'] ?? null, 255),
             str_in($b['phone'] ?? null, 40),
             $email, $accent, $vat,

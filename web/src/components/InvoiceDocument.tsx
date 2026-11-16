@@ -80,6 +80,7 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
     settings?.address,
     settings?.tax_number && `VAT No: ${settings.tax_number}`,
     settings?.cr_number && `CR No: ${settings.cr_number}`,
+    settings?.freelance_no && `Freelance Document: ${settings.freelance_no}`,
   ].filter(Boolean) as string[]
 
   return (

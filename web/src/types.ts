@@ -145,6 +145,7 @@ export interface InvoiceSettings {
   legal_name: string | null
   tax_number: string | null
   cr_number: string | null
+  freelance_no: string | null
   address: string | null
   phone: string | null
   email: string | null

@@ -35,7 +35,7 @@ interface PaperRow {
 /** The amount paid is always the Total; lines adding up to more show the difference as a Discount. */
 function buildPaperData(invoice: Invoice) {
   const rows: PaperRow[] = invoice.lines.length
-    ? invoice.lines.map((l) => ({ description: l.name, note: l.line_note, unitPrice: l.unit_price, qty: l.qty, amount: cents(l.unit_price * l.qty) }))
+    ? invoice.lines.map((l) => ({ description: l.name, note: l.line_note || l.description || null, unitPrice: l.unit_price, qty: l.qty, amount: cents(l.unit_price * l.qty) }))
     : [{ description: 'Purchase', note: null, unitPrice: invoice.amount, qty: 1, amount: invoice.amount }]
   const linesSum = cents(rows.reduce((s, r) => s + r.amount, 0))
   const total = cents(invoice.amount)

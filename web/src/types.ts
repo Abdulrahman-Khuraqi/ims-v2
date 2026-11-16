@@ -56,6 +56,7 @@ export interface CatalogItem {
 export interface InvoiceLine {
   item_id: number
   name: string
+  description?: string | null
   kind: ItemKind
   is_active: boolean
   qty: number

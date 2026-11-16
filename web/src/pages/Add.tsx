@@ -116,7 +116,8 @@ function ImportPanel() {
         let itemId: number | null = null
         if (r.item_name) {
           const n = norm(r.item_name)
-          itemId = items.find((i) => i.is_active && norm(i.name) === n && (i.store_id === null || i.store_id === storeId))?.id ?? null
+          // A service matches by its name or by the alias kept in sku (the name payment files use, e.g. "Branding").
+          itemId = items.find((i) => i.is_active && (norm(i.name) === n || (!!i.sku && norm(i.sku) === n)) && (i.store_id === null || i.store_id === storeId))?.id ?? null
         }
         return { ...r, store_id: storeId, item_id: itemId }
       }),

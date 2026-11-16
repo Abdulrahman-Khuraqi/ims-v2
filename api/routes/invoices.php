@@ -362,7 +362,7 @@ function attach_lines(array $invoices): array
     }
     $ids = array_column($invoices, 'id');
     $lines = all(
-        'SELECT ii.invoice_id, ii.item_id, ii.qty, ii.unit_price, ii.line_note, ci.name, ci.kind, ci.is_active,
+        'SELECT ii.invoice_id, ii.item_id, ii.qty, ii.unit_price, ii.line_note, ci.name, ci.description, ci.kind, ci.is_active,
                 cc.name AS category_name, cc.color AS category_color
          FROM invoice_items ii
          JOIN catalog_items ci ON ci.id = ii.item_id
@@ -376,6 +376,7 @@ function attach_lines(array $invoices): array
         $by[(int)$l['invoice_id']][] = [
             'item_id' => (int)$l['item_id'],
             'name' => $l['name'],
+            'description' => $l['description'],
             'kind' => $l['kind'],
             'is_active' => (bool)$l['is_active'],
             'qty' => (float)$l['qty'],

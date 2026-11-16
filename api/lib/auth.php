@@ -21,13 +21,42 @@ function start_session(): void
     session_start();
 }
 
+/**
+ * Routes that may be called with the import key instead of a session: reading stores/catalog,
+ * adding services, importing invoices and reading them back to verify. Nothing else.
+ */
+const IMPORT_KEY_ROUTES = [
+    'GET stores', 'GET catalog/items', 'GET catalog/categories', 'POST catalog/items',
+    'POST import/check', 'POST import', 'GET invoices',
+];
+
+/**
+ * Automated imports send the "X-Import-Token" header. It must match config.php's import_token
+ * (written by the deploy workflow from the IMPORT_TOKEN repository secret, at least 32 characters);
+ * with no secret set the key is disabled. The request then acts as the first active admin.
+ */
+function import_key_user(): ?array
+{
+    $sent = (string)($_SERVER['HTTP_X_IMPORT_TOKEN'] ?? '');
+    $key = (string)(config()['import_token'] ?? '');
+    if ($sent === '' || strlen($key) < 32 || !hash_equals($key, $sent)) {
+        return null;
+    }
+    $route = ($_SERVER['REQUEST_METHOD'] ?? 'GET') . ' ' . trim((string)($_GET['r'] ?? ''), '/');
+    if (!in_array($route, IMPORT_KEY_ROUTES, true)) {
+        return null;
+    }
+    $id = scalar("SELECT id FROM users WHERE role = 'admin' AND is_active = 1 ORDER BY id LIMIT 1");
+    return $id ? ['uid' => (int)$id] : null;
+}
+
 /** The signed-in user (fresh from the DB so role changes and deactivation apply immediately). */
 function current_user(): ?array
 {
     static $user = false;
     if ($user === false) {
         $user = null;
-        $id = $_SESSION['uid'] ?? null;
+        $id = $_SESSION['uid'] ?? import_key_user()['uid'] ?? null;
         if ($id) {
             $row = one('SELECT id, username, display_name, role, is_active FROM users WHERE id = ?', [$id]);
             if ($row && (int)$row['is_active'] === 1) {

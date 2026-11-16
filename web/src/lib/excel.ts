@@ -239,9 +239,10 @@ function payMethodCode(v: string | null): string | null {
 }
 
 /**
- * Payments export with the columns:
- * Date, Time, Reference, Name, Email, Amount, Currency, Status, Mode, Gateway, Method, Card last 4, Services, Paid at, Checkout ID
- * The store is chosen on the import screen (the file has no store column); "Services" is matched to the catalog.
+ * Payments exports. Two layouts are known:
+ *   Date, Time, Reference, Name, Email, Amount, Currency, Status, Mode, Gateway, Method, Card last 4, Services, Paid at, Checkout ID
+ *   Reference, Created, Status, Amount, Currency, Gateway, Name, Email, Services, Card ("Visa •••• 1234"), Paid at, Gateway reference, Test
+ * The store is chosen on the import screen (the files have no store column); "Services" is matched to the catalog.
  */
 function parsePayments(records: Record<string, unknown>[], fileName: string): ParsedFile {
   const rows: ParsedRow[] = []
@@ -254,12 +255,13 @@ function parsePayments(records: Record<string, unknown>[], fileName: string): Pa
 
     // Test-mode payments are not real money.
     const mode = cellStr(r.mode)?.toLowerCase()
-    if (mode && /test|sandbox|تجريب/.test(mode)) {
+    const testFlag = cellStr(r.test)?.toLowerCase()
+    if ((mode && /test|sandbox|تجريب/.test(mode)) || (testFlag && /^(1|yes|true|y|نعم|test)$/.test(testFlag))) {
       testRows++
       return
     }
     const amount = cellMoney(r.amount)
-    const created = cellDateTime(r.date, r.time)
+    const created = cellDateTime(r.date, r.time) ?? cellDate(r.created)
     const paid = cellDate(r.paidat) ?? created
     if (amount === null || !paid) {
       errors.push(`الصف ${i + 2}: المبلغ والتاريخ مطلوبان`)
@@ -278,13 +280,15 @@ function parsePayments(records: Record<string, unknown>[], fileName: string): Pa
       services.length > 1 ? `الخدمات: ${services.join('، ')}` : null,
       currency && currency !== 'SAR' ? `العملة: ${currency}` : null,
     ].filter(Boolean)
-    const method = cellStr(r.method)
-    const digits = cellStr(r.cardlast4)?.replace(/\D/g, '').slice(-4) || null
+    const card = cellStr(r.card)
+    const method = cellStr(r.method) ?? (card ? card.replace(/[\d•*·.\s]+$/, '').trim() || null : null)
+    // "Card last 4" column, or a single "Card" column like "Visa •••• 1234" / "Mada".
+    const digits = (cellStr(r.cardlast4) ?? card)?.replace(/\D/g, '').slice(-4) || null
     // Excel may store "0042" as the number 42.
     const last4 = digits && typeof r.cardlast4 === 'number' ? digits.padStart(4, '0') : digits
 
     rows.push({
-      transaction_id: cellStr(r.checkoutid) ?? reference ?? rowFingerprint(['pay', paid, amount, name, email]),
+      transaction_id: cellStr(r.checkoutid) ?? cellStr(r.gatewayreference) ?? reference ?? rowFingerprint(['pay', paid, amount, name, email]),
       invoice_no: null,
       customer_name: name,
       email,

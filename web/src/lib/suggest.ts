@@ -87,7 +87,8 @@ export function suggest(amount: number, usable: CatalogItem[], history: History,
 
   // 4. N × a by-the-piece service, preferring whole unit prices nearest the catalog price
   const pieces = priced
-    .filter((i) => i.default_price! <= UNIT_MAX_PRICE)
+    // Only services sold by the piece (posts, covers…); ready-made packs are bought one at a time.
+    .filter((i) => i.kind === 'service' && i.default_price! <= UNIT_MAX_PRICE)
     .map((i) => {
       let best: { n: number; unit: number; d: number } | null = null
       for (let n = 2; n <= MAX_QTY; n++) {

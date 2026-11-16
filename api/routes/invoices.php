@@ -17,6 +17,7 @@ const SORTS = [
     'amount_desc' => 'i.amount DESC, i.id DESC',
     'amount_asc' => 'i.amount ASC, i.id ASC',
     'added_desc' => 'i.id DESC',
+    'updated_desc' => 'i.updated_at DESC, i.id DESC',
 ];
 
 function like_escape(string $s): string
@@ -65,6 +66,9 @@ function invoice_filters(array $u, array $in): array
     }
     if (bool_in($in['unclassified'] ?? null)) {
         $where[] = 'NOT EXISTS (SELECT 1 FROM invoice_items fu WHERE fu.invoice_id = i.id)';
+    }
+    if (bool_in($in['classified'] ?? null)) {
+        $where[] = 'EXISTS (SELECT 1 FROM invoice_items fcl WHERE fcl.invoice_id = i.id)';
     }
     if (($from = date_in($in['from'] ?? null)) !== null) {
         $where[] = 'COALESCE(i.paid_at, i.created_at) >= ?';
@@ -159,7 +163,8 @@ function invoices_update(string $id): void
     db()->beginTransaction();
     q(
         'UPDATE invoices SET store_id = ?, invoice_no = ?, customer_name = ?, email = ?, phone = ?, amount = ?, status = ?,
-            pay_method = ?, card_type = ?, card_last4 = ?, reference_no = ?, auth_code = ?, paid_at = ?, note = ?, updated_by = ?
+            pay_method = ?, card_type = ?, card_last4 = ?, reference_no = ?, auth_code = ?, paid_at = ?, note = ?, updated_by = ?,
+            updated_at = NOW()
          WHERE id = ?',
         [$d['store_id'], $d['invoice_no'], $d['customer_name'], $d['email'], $d['phone'], $d['amount'], $d['status'],
             $d['pay_method'], $d['card_type'], $d['card_last4'], $d['reference_no'], $d['auth_code'], $d['paid_at'],
@@ -239,6 +244,28 @@ function invoices_bulk(): void
             }
             q('UPDATE invoices SET updated_by = ? WHERE id IN (' . placeholders($ids) . ')', array_merge([$u['id']], $ids));
             log_activity($u, 'classify', 'invoice', null, "تحديد «{$item['name']}» لـ $n فاتورة");
+            break;
+
+        case 'set_lines':
+            // The same services and prices on several invoices of the same amount (quick classify by amount).
+            $lines = $b['items'] ?? null;
+            if (!is_array($lines) || !$lines) {
+                fail(422, 'اختر خدمة واحدة على الأقل');
+            }
+            $total = 0.0;
+            foreach ($lines as $l) {
+                $total += (float)(money_in($l['qty'] ?? 1, false, 'الكمية') ?? 1) * (float)(money_in($l['unit_price'] ?? null, true, 'السعر') ?? 0);
+            }
+            foreach ($rows as $r) {
+                if (abs($total - (float)$r['amount']) > 0.05) {
+                    fail(422, 'مجموع البنود لا يساوي مبلغ كل الفواتير المختارة');
+                }
+            }
+            foreach ($rows as $r) {
+                save_lines((int)$r['id'], (int)$r['store_id'], $lines, (float)$r['amount'], $u);
+            }
+            q('UPDATE invoices SET updated_by = ?, updated_at = NOW() WHERE id IN (' . placeholders($ids) . ')', array_merge([$u['id']], $ids));
+            log_activity($u, 'classify', 'invoice', null, "تصنيف $n فاتورة بمبلغ " . round($total, 2) . ' دفعة واحدة');
             break;
 
         case 'move_store':

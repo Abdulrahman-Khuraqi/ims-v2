@@ -5,7 +5,7 @@ import { useFeedback } from '../../components/Feedback'
 import { A4_WIDTH, InvoiceDocument } from '../../components/InvoiceDocument'
 import { Page, TopBar } from '../../components/Layout'
 import { Sheet } from '../../components/Sheet'
-import { Button, Card, ColorPicker, Field, Input, PageLoader, Textarea } from '../../components/ui'
+import { Button, Card, ColorPicker, Field, Input, PageLoader } from '../../components/ui'
 import type { Invoice, InvoiceSettings } from '../../types'
 
 const LOGO_MAX_BYTES = 300_000
@@ -38,7 +38,7 @@ function sampleInvoice(s: InvoiceSettings): Invoice {
     store_id: s.store_id,
     transaction_id: '1234567890',
     invoice_no: 'INV-01024',
-    customer_name: 'اسم العميل',
+    customer_name: 'Customer Name',
     email: 'client@example.com',
     phone: '0500000000',
     amount: 2300,
@@ -60,8 +60,8 @@ function sampleInvoice(s: InvoiceSettings): Invoice {
     created_by_name: null,
     updated_by_name: null,
     lines: [
-      { item_id: 1, name: 'تصميم هوية بصرية', kind: 'service', is_active: true, qty: 1, unit_price: 1800, line_note: null, category_name: 'خدمات', category_color: null },
-      { item_id: 2, name: 'تصاميم سوشيال ميديا', kind: 'service', is_active: true, qty: 5, unit_price: 100, line_note: null, category_name: 'خدمات', category_color: null },
+      { item_id: 1, name: 'Brand identity', kind: 'service', is_active: true, qty: 1, unit_price: 1800, line_note: null, category_name: 'خدمات', category_color: null },
+      { item_id: 2, name: 'Social media designs', kind: 'service', is_active: true, qty: 5, unit_price: 100, line_note: null, category_name: 'خدمات', category_color: null },
     ],
   }
 }
@@ -125,6 +125,7 @@ function TemplateSheet({ settings, onClose, onSaved }: { settings: InvoiceSettin
   const { toast } = useFeedback()
   const [f, setF] = useState(() => ({
     logo: settings.logo ?? '',
+    seal: settings.seal ?? '',
     legal_name: settings.legal_name ?? '',
     tax_number: settings.tax_number ?? '',
     cr_number: settings.cr_number ?? '',
@@ -133,24 +134,11 @@ function TemplateSheet({ settings, onClose, onSaved }: { settings: InvoiceSettin
     email: settings.email ?? '',
     accent_color: settings.accent_color || settings.store_color,
     vat_rate: settings.vat_rate ? String(settings.vat_rate) : '',
-    footer_note: settings.footer_note ?? '',
   }))
   const [saving, setSaving] = useState(false)
   const [preview, setPreview] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }))
-  const current: InvoiceSettings = { ...settings, ...f, vat_rate: Number(f.vat_rate) || 0, logo: f.logo || null }
-
-  const pickLogo = async (file: File | undefined) => {
-    if (!file) return
-    try {
-      const url = await readLogo(file)
-      if (url.length > LOGO_MAX_BYTES) throw new Error('حجم الشعار كبير، استخدم صورة أصغر')
-      setF((x) => ({ ...x, logo: url }))
-    } catch (e) {
-      toast(errorMessage(e), 'error')
-    }
-  }
+  const current: InvoiceSettings = { ...settings, ...f, vat_rate: Number(f.vat_rate) || 0, logo: f.logo || null, seal: f.seal || null }
 
   const save = async () => {
     setSaving(true)
@@ -183,37 +171,10 @@ function TemplateSheet({ settings, onClose, onSaved }: { settings: InvoiceSettin
         }
       >
         <div className="space-y-5">
-          <div>
-            <p className="mb-2 text-[15px] font-medium">الشعار</p>
-            <div className="flex items-center gap-3">
-              <span className="flex h-20 flex-1 items-center justify-center overflow-hidden rounded-2xl border border-line bg-white p-3">
-                {f.logo ? <img src={f.logo} alt="" className="max-h-full max-w-full object-contain" /> : <span className="text-[14px] text-[#64748b]">بدون شعار</span>}
-              </span>
-              <div className="flex flex-col gap-2">
-                <Button variant="soft" size="sm" icon={<ImagePlus className="size-4" />} onClick={() => fileRef.current?.click()}>
-                  {f.logo ? 'تغيير' : 'رفع'}
-                </Button>
-                {f.logo && (
-                  <Button variant="secondary" size="sm" icon={<Trash2 className="size-4" />} onClick={() => setF((x) => ({ ...x, logo: '' }))}>
-                    إزالة
-                  </Button>
-                )}
-              </div>
-            </div>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/svg+xml"
-              className="hidden"
-              onChange={(e) => {
-                pickLogo(e.target.files?.[0])
-                e.target.value = ''
-              }}
-            />
-            <p className="mt-1.5 text-[13px] text-muted">يُفضّل شعار بخلفية شفافة (SVG أو PNG).</p>
-          </div>
+          <ImagePicker label="الشعار" hint="يظهر أعلى الفاتورة. يُفضّل خلفية شفافة (SVG أو PNG)." value={f.logo} onChange={(v) => setF((x) => ({ ...x, logo: v }))} />
+          <ImagePicker label="الختم" hint="يظهر أسفل الفاتورة. استخدم صورة الختم الرسمي إن وُجد." value={f.seal} onChange={(v) => setF((x) => ({ ...x, seal: v }))} round />
 
-          <Field label="الاسم في الفاتورة" hint="الاسم التجاري أو اسم المنشأة">
+          <Field label="اسم الشركة في الفاتورة" hint="الفاتورة بالإنجليزية، فيُفضّل الاسم بالإنجليزية">
             <Input value={f.legal_name} onChange={set('legal_name')} placeholder={settings.store_name} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
@@ -227,7 +188,7 @@ function TemplateSheet({ settings, onClose, onSaved }: { settings: InvoiceSettin
           <Field label="نسبة ضريبة القيمة المضافة ٪" hint="اتركها فارغة إذا لم تكن مسجلاً في الضريبة. المبالغ تُعتبر شاملة الضريبة.">
             <Input value={f.vat_rate} onChange={set('vat_rate')} inputMode="decimal" placeholder="مثال: 15" dir="ltr" className="num" />
           </Field>
-          <Field label="العنوان">
+          <Field label="العنوان" hint="بالإنجليزية، مثال: Riyadh, Saudi Arabia">
             <Input value={f.address} onChange={set('address')} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
@@ -238,11 +199,8 @@ function TemplateSheet({ settings, onClose, onSaved }: { settings: InvoiceSettin
               <Input type="email" value={f.email} onChange={set('email')} dir="ltr" autoCapitalize="none" />
             </Field>
           </div>
-          <Field label="لون الفاتورة">
+          <Field label="لون اسم الشركة أعلى الفاتورة">
             <ColorPicker value={f.accent_color} onChange={(c) => setF((x) => ({ ...x, accent_color: c }))} />
-          </Field>
-          <Field label="نص أسفل الفاتورة">
-            <Textarea rows={2} value={f.footer_note} onChange={set('footer_note')} placeholder={`شكراً لتعاملكم مع ${settings.store_name}`} />
           </Field>
         </div>
       </Sheet>
@@ -267,8 +225,56 @@ function ScaledPreview({ children }: { children: ReactNode }) {
     return () => ro.disconnect()
   }, [])
   return (
-    <div ref={ref} className="overflow-hidden rounded-2xl border border-line shadow-card" style={{ height: 1123 * scale }}>
-      <div style={{ width: A4_WIDTH, transform: `scale(${scale})`, transformOrigin: 'top right' }}>{children}</div>
+    // dir=ltr: the paper is English; in the RTL app it would otherwise overflow to the left of its box.
+    <div ref={ref} dir="ltr" className="overflow-hidden rounded-2xl border border-line shadow-card" style={{ height: 1123 * scale }}>
+      <div style={{ width: A4_WIDTH, transform: `scale(${scale})`, transformOrigin: 'top left' }}>{children}</div>
+    </div>
+  )
+}
+
+/** Upload / replace / remove an image stored as a data URL (logo or stamp). */
+function ImagePicker({ label, hint, value, onChange, round }: { label: string; hint: string; value: string; onChange: (v: string) => void; round?: boolean }) {
+  const { toast } = useFeedback()
+  const ref = useRef<HTMLInputElement>(null)
+  const pick = async (file: File | undefined) => {
+    if (!file) return
+    try {
+      const url = await readLogo(file)
+      if (url.length > LOGO_MAX_BYTES) throw new Error(`حجم ${label} كبير، استخدم صورة أصغر`)
+      onChange(url)
+    } catch (e) {
+      toast(errorMessage(e), 'error')
+    }
+  }
+  return (
+    <div>
+      <p className="mb-2 text-[15px] font-medium">{label}</p>
+      <div className="flex items-center gap-3">
+        <span className={`flex flex-1 items-center justify-center overflow-hidden rounded-2xl border border-line bg-white p-3 ${round ? 'h-28' : 'h-20'}`}>
+          {value ? <img src={value} alt="" className="max-h-full max-w-full object-contain" /> : <span className="text-[14px] text-[#64748b]">بدون {label}</span>}
+        </span>
+        <div className="flex flex-col gap-2">
+          <Button variant="soft" size="sm" icon={<ImagePlus className="size-4" />} onClick={() => ref.current?.click()}>
+            {value ? 'تغيير' : 'رفع'}
+          </Button>
+          {value && (
+            <Button variant="secondary" size="sm" icon={<Trash2 className="size-4" />} onClick={() => onChange('')}>
+              إزالة
+            </Button>
+          )}
+        </div>
+      </div>
+      <input
+        ref={ref}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+        className="hidden"
+        onChange={(e) => {
+          pick(e.target.files?.[0])
+          e.target.value = ''
+        }}
+      />
+      <p className="mt-1.5 text-[13px] text-muted">{hint}</p>
     </div>
   )
 }

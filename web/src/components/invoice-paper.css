@@ -1,0 +1,218 @@
+/*
+ * The printable invoice paper, modelled on the print layout of the ARVO purchase invoice
+ * (A4, 10mm margins). Plain CSS with hex colors on purpose: it is rasterized for PNG/PDF
+ * export and must look the same in light and dark mode, so it ignores the app theme.
+ * Fixed A4 width (794px @ 96dpi); the preview scales it down with a CSS transform.
+ */
+.ip {
+  --ip-primary: #0f2942;
+  box-sizing: border-box;
+  width: 794px;
+  min-height: 1123px;
+  padding: 38px;
+  background: #fff;
+  color: #000;
+  font-family: Arial, Helvetica, 'IBM Plex Sans Arabic', sans-serif;
+  font-size: 13px;
+  line-height: normal;
+  direction: ltr;
+  text-align: left;
+}
+.ip *,
+.ip *::before,
+.ip *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Header */
+.ip-brand {
+  margin-bottom: 12px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ip-primary);
+}
+.ip-head-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ip-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #000;
+}
+.ip-logo {
+  display: block;
+  max-height: var(--ip-logo-h, 52px);
+  width: auto;
+  object-fit: contain;
+}
+.ip-rule {
+  height: 2px;
+  margin: 10px 0 14px;
+  background: #000;
+}
+
+/* Invoice number / date, company, bill to */
+.ip-parties {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+.ip-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.ip-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.ip-meta-label {
+  min-width: 110px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ip-meta-value {
+  padding: 2px 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.ip-block h3 {
+  margin-bottom: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ip-company-info {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.ip-field {
+  margin-bottom: 5px;
+}
+.ip-field:last-child {
+  margin-bottom: 0;
+}
+.ip-field-label {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.ip-field-value {
+  display: block;
+  padding: 2px 4px;
+  font-size: 11px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+/* Items */
+.ip-table {
+  width: 100%;
+  margin-bottom: 10px;
+  border-collapse: collapse;
+  border: 1px solid #000;
+  font-size: 10px;
+}
+.ip-table th,
+.ip-table td {
+  padding: 5px 8px;
+  border: 1px solid #666;
+  text-align: left;
+  font-weight: 500;
+}
+.ip-table thead th {
+  background: #333;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.ip-table tbody tr:nth-child(even) {
+  background: #f5f5f5;
+}
+.ip-table .ip-col-desc {
+  min-width: 180px;
+}
+.ip-table thead .ip-col-price,
+.ip-table thead .ip-col-amount {
+  text-align: right;
+}
+.ip-table thead .ip-col-qty {
+  text-align: center;
+}
+.ip-table .ip-col-price,
+.ip-table .ip-col-amount {
+  width: 100px;
+  white-space: nowrap;
+}
+.ip-table .ip-col-qty {
+  width: 70px;
+}
+.ip-item-note {
+  margin-top: 2px;
+  font-size: 9px;
+  color: #444;
+}
+
+/* Totals */
+.ip-totals {
+  width: 100%;
+  max-width: 300px;
+  margin: 0 0 12px auto;
+  border-collapse: collapse;
+  border: 1px solid #000;
+}
+.ip-totals td {
+  padding: 5.5px 8px;
+  border: 1px solid #000;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.ip-totals td:first-child {
+  width: 38%;
+  font-weight: 600;
+}
+.ip-totals td:last-child {
+  text-align: right;
+}
+.ip-totals .ip-total-row td {
+  background: #eee;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Seal */
+.ip-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 16px;
+  margin-top: 16px;
+}
+.ip-seal {
+  display: block;
+  width: var(--ip-seal-w, 250px);
+  height: auto;
+}
+
+/* Keeps digits and currency together and left-to-right, even next to Arabic names. */
+.ip-num {
+  unicode-bidi: isolate;
+}

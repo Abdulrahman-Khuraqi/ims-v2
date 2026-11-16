@@ -141,6 +141,7 @@ export interface InvoiceSettings {
   store_color: string
   website: string | null
   logo: string | null
+  seal: string | null
   legal_name: string | null
   tax_number: string | null
   cr_number: string | null

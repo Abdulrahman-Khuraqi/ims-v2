@@ -6,7 +6,7 @@ function stores_list(): void
     $u = require_user();
     [$scope, $params] = store_scope_sql($u, 's.id');
     $stores = all(
-        "SELECT s.id, s.name, s.color, s.is_active, s.sort,
+        "SELECT s.id, s.name, s.color, s.website, s.is_active, s.sort,
                 (SELECT COUNT(*) FROM invoices i WHERE i.store_id = s.id) AS invoice_count
          FROM stores s WHERE $scope ORDER BY s.is_active DESC, s.sort, s.id",
         $params
@@ -32,7 +32,10 @@ function stores_create(): void
     $name = str_in($b['name'] ?? null, 120, true, 'اسم المتجر');
     assert_store_name_free($name);
     $sort = (int)scalar('SELECT COALESCE(MAX(sort), 0) + 1 FROM stores');
-    q('INSERT INTO stores (name, color, sort) VALUES (?, ?, ?)', [$name, color_in($b['color'] ?? null, '#6366f1'), $sort]);
+    q(
+        'INSERT INTO stores (name, color, website, sort) VALUES (?, ?, ?, ?)',
+        [$name, color_in($b['color'] ?? null, '#6366f1'), website_in($b['website'] ?? null), $sort]
+    );
     $id = (int)db()->lastInsertId();
     log_activity($u, 'create', 'store', $id, "إضافة متجر: $name");
     json_out(['id' => $id]);
@@ -48,10 +51,14 @@ function stores_update(string $id): void
         assert_store_name_free($name, (int)$id);
     }
     $color = array_key_exists('color', $b) ? color_in($b['color'], $store['color']) : $store['color'];
+    $website = array_key_exists('website', $b) ? website_in($b['website']) : $store['website'];
     $sort = array_key_exists('sort', $b) ? (int)$b['sort'] : (int)$store['sort'];
     $active = array_key_exists('is_active', $b) ? bool_in($b['is_active']) : (bool)$store['is_active'];
 
-    q('UPDATE stores SET name = ?, color = ?, sort = ?, is_active = ? WHERE id = ?', [$name, $color, $sort, (int)$active, (int)$id]);
+    q(
+        'UPDATE stores SET name = ?, color = ?, website = ?, sort = ?, is_active = ? WHERE id = ?',
+        [$name, $color, $website, $sort, (int)$active, (int)$id]
+    );
     if ($active !== (bool)$store['is_active']) {
         log_activity($u, $active ? 'restore' : 'archive', 'store', (int)$id, ($active ? 'استعادة متجر: ' : 'أرشفة متجر: ') . $name);
     } else {
@@ -131,6 +138,23 @@ function find_store(int $id): array
         fail(404, 'المتجر غير موجود');
     }
     return $s;
+}
+
+/** Optional store website: adds https:// when missing and accepts only http(s) URLs with a host. */
+function website_in($v): ?string
+{
+    $url = str_in($v, 255, false, 'الموقع الإلكتروني');
+    if ($url === null) {
+        return null;
+    }
+    if (!preg_match('#^https?://#i', $url)) {
+        $url = 'https://' . $url;
+    }
+    $host = parse_url($url, PHP_URL_HOST);
+    if (!filter_var($url, FILTER_VALIDATE_URL) || !$host || !str_contains($host, '.') || mb_strlen($url) > 255) {
+        fail(422, 'الموقع الإلكتروني غير صحيح، مثال: https://example.com');
+    }
+    return $url;
 }
 
 function assert_store_name_free(string $name, int $exceptId = 0): void

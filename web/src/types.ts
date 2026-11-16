@@ -20,6 +20,7 @@ export interface Store {
   id: number
   name: string
   color: string
+  website: string | null
   is_active: boolean
   sort: number
   invoice_count: number

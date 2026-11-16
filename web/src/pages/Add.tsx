@@ -451,10 +451,19 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: 'su
   )
 }
 
+export function WebsiteField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <Field label="الموقع الإلكتروني">
+      <Input type="url" inputMode="url" value={value} onChange={(e) => onChange(e.target.value)} placeholder="https://example.com" autoCapitalize="none" autoCorrect="off" dir="ltr" />
+    </Field>
+  )
+}
+
 export function NewStoreSheet({ open, onClose, onCreated, defaultName = '' }: { open: boolean; onClose: () => void; onCreated: (id: number) => void; defaultName?: string }) {
   const { toast } = useFeedback()
   const [name, setName] = useState(defaultName)
   const [color, setColor] = useState(PALETTE[Math.floor(Math.random() * PALETTE.length)])
+  const [website, setWebsite] = useState('')
   const [saving, setSaving] = useState(false)
   const [lastDefault, setLastDefault] = useState(defaultName)
   if (defaultName !== lastDefault) {
@@ -464,9 +473,10 @@ export function NewStoreSheet({ open, onClose, onCreated, defaultName = '' }: { 
   const save = async () => {
     setSaving(true)
     try {
-      const r = await api<{ id: number }>('stores', { method: 'POST', body: { name, color } })
+      const r = await api<{ id: number }>('stores', { method: 'POST', body: { name, color, website } })
       toast(`تمت إضافة متجر ${name}`)
       setName('')
+      setWebsite('')
       onCreated(r.id)
     } catch (e) {
       toast(errorMessage(e), 'error')
@@ -489,6 +499,7 @@ export function NewStoreSheet({ open, onClose, onCreated, defaultName = '' }: { 
         <Field label="اسم المتجر" required>
           <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
+        <WebsiteField value={website} onChange={setWebsite} />
         <Field label="اللون">
           <ColorPicker value={color} onChange={setColor} />
         </Field>

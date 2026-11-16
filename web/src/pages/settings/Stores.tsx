@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Archive, ArchiveRestore, Cpu, Plus, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, Cpu, ExternalLink, Globe, Plus, Trash2 } from 'lucide-react'
 import { api, errorMessage } from '../../api'
 import { useApp } from '../../context'
 import { useFeedback } from '../../components/Feedback'
@@ -7,7 +7,9 @@ import { Page, TopBar } from '../../components/Layout'
 import { Sheet } from '../../components/Sheet'
 import { Badge, Button, Card, ColorPicker, Field, IconButton, Input, SectionTitle, Select, StoreDot } from '../../components/ui'
 import type { Store } from '../../types'
-import { NewStoreSheet } from '../Add'
+import { NewStoreSheet, WebsiteField } from '../Add'
+
+const siteLabel = (url: string) => url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, '')
 
 export default function StoresSettings() {
   const { stores, reloadStores } = useApp()
@@ -26,6 +28,12 @@ export default function StoresSettings() {
         <span className="text-[14px] text-muted">
           <span className="num">{s.invoice_count}</span> فاتورة · <span className="num">{s.terminals.length}</span> جهاز
         </span>
+        {s.website && (
+          <span className="mt-0.5 flex items-center gap-1 text-[14px] text-primary">
+            <Globe className="size-3.5 shrink-0" />
+            <span dir="ltr" className="truncate">{siteLabel(s.website)}</span>
+          </span>
+        )}
       </span>
       {!s.is_active && <Badge>مؤرشف</Badge>}
     </Card>
@@ -75,6 +83,7 @@ function EditStoreSheet({ store, onClose }: { store: Store; onClose: () => void 
   const { toast, confirm } = useFeedback()
   const [name, setName] = useState(store.name)
   const [color, setColor] = useState(store.color)
+  const [website, setWebsite] = useState(store.website ?? '')
   const [terminal, setTerminal] = useState('')
   const [moveTo, setMoveTo] = useState('')
   const [saving, setSaving] = useState(false)
@@ -94,7 +103,7 @@ function EditStoreSheet({ store, onClose }: { store: Store; onClose: () => void 
 
   const save = async () => {
     setSaving(true)
-    if (await call(() => api(`stores/${store.id}`, { method: 'PUT', body: { name, color } }), 'تم الحفظ')) onClose()
+    if (await call(() => api(`stores/${store.id}`, { method: 'PUT', body: { name, color, website } }), 'تم الحفظ')) onClose()
     setSaving(false)
   }
 
@@ -137,6 +146,14 @@ function EditStoreSheet({ store, onClose }: { store: Store; onClose: () => void 
         <Field label="اسم المتجر" required>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
+        <div>
+          <WebsiteField value={website} onChange={setWebsite} />
+          {store.website && (
+            <a href={store.website} target="_blank" rel="noopener noreferrer" className="mt-1.5 inline-flex h-10 items-center gap-1.5 text-[14px] font-semibold text-primary">
+              <ExternalLink className="size-4" /> فتح الموقع
+            </a>
+          )}
+        </div>
         <Field label="اللون">
           <ColorPicker value={color} onChange={setColor} />
         </Field>

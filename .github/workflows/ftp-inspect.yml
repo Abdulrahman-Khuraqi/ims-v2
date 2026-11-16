@@ -26,5 +26,9 @@ jobs:
               fi
             done
           }
+          echo "== Server-reported working directory (PWD) =="
+          curl -sS -v --max-time 30 --user "$FTP_USERNAME:$FTP_PASSWORD" "ftp://$FTP_SERVER/" -Q PWD --list-only 2>&1 | grep -E '^< 257|^< 230' || true
+          echo "== Parent folder (../) =="
+          ls_dir "../" | head -50 || true
           echo "== FTP root as seen by this account =="
           walk "" 4 ""

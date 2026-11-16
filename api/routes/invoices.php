@@ -184,7 +184,7 @@ function invoices_delete(string $id): void
     json_out(['ok' => true]);
 }
 
-/** Bulk actions on selected invoices: delete, assign a service/product, or move to another store. */
+/** Bulk actions on selected invoices: delete, remove as test payments, assign a service/product, or move to another store. */
 function invoices_bulk(): void
 {
     $u = require_user('editor');
@@ -202,6 +202,16 @@ function invoices_bulk(): void
 
     db()->beginTransaction();
     switch ($b['action'] ?? '') {
+        case 'remove_test':
+            // Test payments: remember their gateway ids so a re-import skips them, then delete.
+            q(
+                'INSERT IGNORE INTO ignored_transactions (transaction_id, reason, amount, created_by)
+                 SELECT transaction_id, \'test\', amount, ? FROM invoices WHERE transaction_id IS NOT NULL AND id IN (' . placeholders($ids) . ')',
+                array_merge([$u['id']], $ids)
+            );
+            q('DELETE FROM invoices WHERE id IN (' . placeholders($ids) . ')', $ids);
+            log_activity($u, 'delete', 'invoice', null, "إزالة $n عملية تجريبية");
+            break;
         case 'delete':
             q('DELETE FROM invoices WHERE id IN (' . placeholders($ids) . ')', $ids);
             log_activity($u, 'delete', 'invoice', null, "حذف جماعي لـ $n فاتورة");

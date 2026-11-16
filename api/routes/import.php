@@ -12,8 +12,11 @@ function import_check(): void
     $ids = array_values(array_unique(array_filter(array_map(fn($v) => is_scalar($v) ? substr((string)$v, 0, 64) : '', $ids))));
     $existing = [];
     foreach (array_chunk($ids, 500) as $chunk) {
+        // Payments removed as tests count as already handled, so they are not offered again.
         $existing = array_merge($existing, array_column(
-            all('SELECT transaction_id FROM invoices WHERE transaction_id IN (' . placeholders($chunk) . ')', $chunk),
+            all('SELECT transaction_id FROM invoices WHERE transaction_id IN (' . placeholders($chunk) . ')
+                 UNION SELECT transaction_id FROM ignored_transactions WHERE transaction_id IN (' . placeholders($chunk) . ')',
+                array_merge($chunk, $chunk)),
             'transaction_id'
         ));
     }
@@ -76,6 +79,10 @@ function import_rows(): void
             $storeCache[$storeId] = true;
         }
         $txn = str_in($r['transaction_id'] ?? null, 64, true, 'رقم العملية (TransactionID)');
+        if (scalar('SELECT 1 FROM ignored_transactions WHERE transaction_id = ?', [$txn])) {
+            $skipped++; // removed earlier as a test payment
+            continue;
+        }
         $amount = money_in($r['amount'] ?? null, true, 'المبلغ');
         $paid = date_in($r['paid_at'] ?? null) ?? date_in($r['created_at_src'] ?? null) ?? date('Y-m-d H:i:s');
         $itemId = int_in($r['item_id'] ?? null);

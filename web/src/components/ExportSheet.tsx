@@ -172,7 +172,8 @@ export function ExportSheet({ open, onClose, query, total }: { open: boolean; on
                   </li>
                 ))}
               </ul>
-              {plan.skipped.unclassified ? <p className="mt-2 text-[13px] opacity-90">صنّف هذه الفواتير من صفحة الفواتير (فلتر «غير مصنّفة») ثم صدّرها.</p> : null}
+              {plan.skipped.unclassified ? <p className="mt-2 text-[13px] opacity-90">صنّف هذه الفواتير من «التصنيف السريع» ثم صدّرها.</p> : null}
+              {plan.skipped.test ? <p className="mt-1 text-[13px] opacity-90">العمليات التجريبية تقدر تحذفها نهائياً من «التصنيف السريع» ← إزالة العمليات التجريبية.</p> : null}
             </div>
           )}
           {tooMany && (

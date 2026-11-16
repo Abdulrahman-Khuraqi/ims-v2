@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, History, KeyRound, LogOut, Monitor, Moon, Package, Smartphone, Store as StoreIcon, Sun, Users } from 'lucide-react'
+import { ChevronLeft, FileDown, FileText, History, KeyRound, LogOut, Monitor, Moon, Package, Smartphone, Store as StoreIcon, Sun, Users } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'
+import { ExportSheet } from '../components/ExportSheet'
 import { useFeedback } from '../components/Feedback'
 import { Page, TopBar } from '../components/Layout'
 import { Sheet } from '../components/Sheet'
@@ -11,11 +12,12 @@ import { ROLE_LABELS } from '../lib/format'
 import { getThemePref, setThemePref, type ThemePref } from '../lib/theme'
 
 export default function Settings() {
-  const { user, setUser, can, stores, items } = useApp()
+  const { user, setUser, can, stores, items, currentStore } = useApp()
   const { confirm, toast } = useFeedback()
   const navigate = useNavigate()
   const [theme, setTheme] = useState<ThemePref>(getThemePref)
   const [pwOpen, setPwOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
 
   const logout = async () => {
     if (!(await confirm({ title: 'تسجيل الخروج؟', confirmLabel: 'خروج' }))) return
@@ -59,8 +61,14 @@ export default function Settings() {
         <Group>
           {can('admin') && <Item icon={<StoreIcon />} label="المتاجر" value={String(stores.filter((s) => s.is_active).length)} onClick={() => navigate('/settings/stores')} />}
           <Item icon={<Package />} label="الخدمات والمنتجات" value={String(items.filter((i) => i.is_active).length)} onClick={() => navigate('/settings/catalog')} />
+          {can('admin') && <Item icon={<FileText />} label="قوالب الفواتير" onClick={() => navigate('/settings/invoice-templates')} />}
           {can('admin') && <Item icon={<Users />} label="المستخدمون والصلاحيات" onClick={() => navigate('/settings/users')} />}
           {can('admin') && <Item icon={<History />} label="سجل النشاط" onClick={() => navigate('/settings/activity')} />}
+        </Group>
+
+        <SectionTitle>التصدير</SectionTitle>
+        <Group>
+          <Item icon={<FileDown />} label="تصدير الفواتير (PDF أو Excel)" onClick={() => setExportOpen(true)} />
         </Group>
 
         <SectionTitle>الحساب</SectionTitle>
@@ -72,6 +80,7 @@ export default function Settings() {
         <p className="mt-6 text-center text-[13px] text-muted">إدارة الفواتير · الإصدار 1.0</p>
       </Page>
       <PasswordSheet open={pwOpen} onClose={() => setPwOpen(false)} />
+      <ExportSheet open={exportOpen} onClose={() => setExportOpen(false)} query={{ store: currentStore }} />
     </>
   )
 }

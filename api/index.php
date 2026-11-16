@@ -34,6 +34,8 @@ const ROUTES = [
     ['POST', 'stores/(\d+)/move-invoices', 'stores_move_invoices'],
     ['POST', 'terminals', 'terminals_save'],
     ['DELETE', 'terminals/([\w\-]+)', 'terminals_delete'],
+    ['GET', 'invoice-settings', 'invoice_settings_list'],
+    ['PUT', 'invoice-settings/(\d+)', 'invoice_settings_save'],
 
     ['GET', 'catalog/categories', 'categories_list'],
     ['POST', 'catalog/categories', 'categories_create'],

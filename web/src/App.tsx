@@ -11,6 +11,7 @@ import { Login, Setup } from './pages/Login'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import CatalogSettings from './pages/settings/Catalog'
+import InvoiceTemplates from './pages/settings/InvoiceTemplates'
 import StoresSettings from './pages/settings/Stores'
 import { ActivityPage, UsersSettings } from './pages/settings/Users'
 import type { User } from './types'
@@ -84,6 +85,7 @@ function AppRoutes() {
       {can('admin') && (
         <>
           <Route path="/settings/stores" element={<StoresSettings />} />
+          <Route path="/settings/invoice-templates" element={<InvoiceTemplates />} />
           <Route path="/settings/users" element={<UsersSettings />} />
           <Route path="/settings/activity" element={<ActivityPage />} />
         </>

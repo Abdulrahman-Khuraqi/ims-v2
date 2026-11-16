@@ -133,3 +133,21 @@ export interface Activity {
   created_at: string
   user_name: string | null
 }
+
+/** Per-store invoice template used by the PDF export (Settings → قوالب الفواتير). */
+export interface InvoiceSettings {
+  store_id: number
+  store_name: string
+  store_color: string
+  website: string | null
+  logo: string | null
+  legal_name: string | null
+  tax_number: string | null
+  cr_number: string | null
+  address: string | null
+  phone: string | null
+  email: string | null
+  accent_color: string | null
+  vat_rate: number
+  footer_note: string | null
+}

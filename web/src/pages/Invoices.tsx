@@ -4,19 +4,20 @@ import { ArrowLeftRight, CalendarDays, CheckSquare, Download, FileText, SlidersH
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'
 import { useFeedback } from '../components/Feedback'
+import { ExportSheet } from '../components/ExportSheet'
 import { InvoiceCard, InvoiceSheet } from '../components/InvoiceViews'
 import { ItemPicker } from '../components/ItemPicker'
 import { Page, TopBar } from '../components/Layout'
 import { Sheet } from '../components/Sheet'
-import { Button, Chip, EmptyState, Field, IconButton, Input, Money, PageLoader, Segmented, Select, Spinner, StoreDot, cx } from '../components/ui'
-import { PAY_METHODS, RANGE_LABELS, rangeDates, ymd, type RangeKey } from '../lib/format'
+import { Button, Chip, EmptyState, Field, IconButton, Input, Money, PageLoader, Segmented, Select, StoreDot, cx } from '../components/ui'
+import { PAY_METHODS, RANGE_LABELS, rangeDates, type RangeKey } from '../lib/format'
 import type { Invoice, InvoiceList } from '../types'
 
 const PER_PAGE = 30
 const FILTER_KEYS = ['unclassified', 'item', 'kind', 'category', 'range', 'from', 'to', 'pay_method', 'source', 'min', 'max', 'sort'] as const
 
 export default function Invoices() {
-  const { currentStore, items, categories, can, activeStores, storeById } = useApp()
+  const { currentStore, items, categories, can, activeStores } = useApp()
   const { toast, confirm } = useFeedback()
   const [params, setParams] = useSearchParams()
   const [q, setQ] = useState(params.get('q') ?? '')
@@ -28,7 +29,7 @@ export default function Invoices() {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [selectMode, setSelectMode] = useState(false)
   const [sheet, setSheet] = useState<null | 'range' | 'filters' | 'item' | 'bulkItem' | 'bulkMove'>(null)
-  const [exporting, setExporting] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const reqId = useRef(0)
   const sentinel = useRef<HTMLDivElement>(null)
 
@@ -140,26 +141,6 @@ export default function Invoices() {
     if (ok) bulk({ action: 'delete' }, 'تم الحذف')
   }
 
-  const doExport = async () => {
-    if (!data?.total) return
-    setExporting(true)
-    try {
-      const all: Invoice[] = []
-      for (let page = 1; all.length < data.total; page++) {
-        const r = await api<InvoiceList>('invoices', { query: { ...query, page, per_page: 1000 } })
-        all.push(...r.invoices)
-        if (!r.invoices.length) break
-      }
-      const storeName = storeById(currentStore)?.name
-      const { exportInvoices } = await import('../lib/excel')
-      exportInvoices(all, `فواتير${storeName ? '-' + storeName : ''}-${ymd(new Date())}.xlsx`)
-    } catch (e) {
-      toast(errorMessage(e), 'error')
-    } finally {
-      setExporting(false)
-    }
-  }
-
   const itemFilter = items.find((i) => String(i.id) === params.get('item'))
   const extraFilters = ['kind', 'category', 'pay_method', 'source', 'min', 'max', 'sort'].filter((k) => params.get(k)).length
   const rangeLabel = range ? RANGE_LABELS[range] : params.get('from') || params.get('to') ? `${params.get('from') ?? '…'} ← ${params.get('to') ?? '…'}` : 'الفترة'
@@ -173,8 +154,8 @@ export default function Invoices() {
         title="الفواتير"
         switcher
         actions={
-          <IconButton label="تصدير Excel" onClick={doExport} disabled={exporting || !data?.total}>
-            {exporting ? <Spinner className="size-5" /> : <Download className="size-6" />}
+          <IconButton label="تصدير" onClick={() => setExportOpen(true)} disabled={!data?.total}>
+            <Download className="size-6" />
           </IconButton>
         }
       />
@@ -406,6 +387,7 @@ export default function Invoices() {
           </div>
         </div>
       </Sheet>
+      <ExportSheet open={exportOpen} onClose={() => setExportOpen(false)} query={query} total={data?.total} />
     </>
   )
 }

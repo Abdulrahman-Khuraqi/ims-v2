@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { Invoice, InvoiceSettings } from '../types'
-import { parseDate } from '../lib/format'
+import { parseDate, payLabel } from '../lib/format'
 import './invoice-paper.css'
 
 /**
@@ -20,6 +20,17 @@ function paperDate(s: string | null | undefined) {
   const d = parseDate(s)
   return d ? `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}` : '—'
 }
+
+/** "2026-11-14 19:35:00" → "14/11/2026, 19:35" */
+function paperDateTime(s: string | null | undefined) {
+  const d = parseDate(s)
+  return d ? `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}` : '—'
+}
+
+/** Payment methods in English for the paper ("Mada" → "mada", "ApplePay" → "Apple Pay"). */
+const PAY_EN: Record<string, string> = { Card: 'Card', Mada: 'mada', ApplePay: 'Apple Pay', SamsungPay: 'Samsung Pay', Cash: 'Cash', Transfer: 'Bank transfer', Other: 'Other' }
+
+const FAILED = /fail|declin|cancel|refund|revers|reject|void|error/i
 
 /** 1500 → "1500.00" (no thousands separator, like the original invoices). */
 const paperMoney = (n: number) => n.toFixed(2)
@@ -183,7 +194,14 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
         </tbody>
       </table>
 
+      <PaymentAndNotes invoice={invoice} settings={settings} company={company} brand={brand} vatRate={vatRate} total={d.total} />
+
       <footer className="ip-footer">{settings?.seal && <img src={settings.seal} alt={`Company Seal - ${company}`} className="ip-seal" />}</footer>
+
+      <div className="ip-closing">
+        This is a computer-generated invoice. Thank you for choosing {brand}
+        {website ? ` · ${website}` : ''}
+      </div>
     </div>
   )
 }
@@ -204,5 +222,78 @@ export function PaperPreview({ children }: { children: ReactNode }) {
     <div ref={ref} dir="ltr" className="overflow-hidden rounded-2xl border border-line bg-white shadow-card" style={{ height: A4_HEIGHT * scale }}>
       <div style={{ width: A4_WIDTH, transform: `scale(${scale})`, transformOrigin: 'top left' }}>{children}</div>
     </div>
+  )
+}
+
+/**
+ * Payment details exactly as recorded (imported from the store's payment page or entered in the app),
+ * and the standard notes printed on every invoice.
+ */
+function PaymentAndNotes({
+  invoice, settings, company, brand, vatRate, total,
+}: {
+  invoice: Invoice
+  settings?: InvoiceSettings
+  company: string
+  brand: string
+  vatRate: number
+  total: number
+}) {
+  const website = settings?.website?.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, '')
+  const paid = !FAILED.test(invoice.status ?? '')
+  const method = invoice.pay_method ? PAY_EN[invoice.pay_method] ?? payLabel(invoice.pay_method) : null
+  // "Card (Visa •••• 1234)", "mada •••• 5678": the brand only when it adds something to the method.
+  const brand2 = invoice.card_type && invoice.card_type.toLowerCase() !== (method ?? '').toLowerCase() ? invoice.card_type : null
+  const card = [brand2, invoice.card_last4 ? `•••• ${invoice.card_last4}` : null].filter(Boolean).join(' ')
+  const txn = invoice.transaction_id && !invoice.transaction_id.startsWith('tpl-') && invoice.transaction_id !== invoice.reference_no ? invoice.transaction_id : null
+  const online = invoice.source === 'import'
+  const contact = [settings?.email, settings?.phone].filter(Boolean).join(' or ')
+
+  const rows: [string, ReactNode][] = [
+    ['Payment Status', paid ? <span className="ip-paid">PAID</span> : invoice.status],
+    ['Amount Paid', `${total.toFixed(2)} SAR`],
+  ]
+  if (method || card) rows.push(['Payment Method', [method, card && (brand2 ? `(${card})` : card)].filter(Boolean).join(' ')])
+  rows.push(['Payment Date', paperDateTime(invoice.paid_at ?? invoice.created_at)])
+  if (invoice.reference_no) rows.push(['Payment Reference', invoice.reference_no])
+  if (txn) rows.push(['Transaction ID', <span className="ip-break">{txn}</span>])
+  if (invoice.auth_code) rows.push(['Authorisation Code', invoice.auth_code])
+  rows.push(['Payment Channel', online ? `Online checkout${website ? ` on ${website}` : ''}` : `Recorded by ${brand}`])
+
+  const notes = [
+    paid && 'This invoice is issued for a payment received in full. No further amount is due.',
+    online
+      ? `The payment details above are taken directly from the payment record of the secure online checkout${website ? ` on ${website}` : ''}.`
+      : `The payment details above are as recorded by ${company}.`,
+    'The services listed describe the work covered by this payment. Final deliverables, timelines and revisions follow the scope agreed with the client.',
+    `All amounts are in Saudi Riyals (SAR).${vatRate > 0 ? ` Prices include VAT at ${vatRate}%.` : ''}`,
+    website && `Cancellation and refund terms are published on ${website}.`,
+    contact && `For any questions about this invoice, please contact ${contact}.`,
+  ].filter(Boolean) as string[]
+
+  return (
+    <section className="ip-info">
+      <div>
+        <h3>Payment Details</h3>
+        <table className="ip-pay">
+          <tbody>
+            {rows.map(([k, v]) => (
+              <tr key={k}>
+                <td>{k}</td>
+                <td className="ip-num">{v}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h3>Notes</h3>
+        <ol className="ip-notes">
+          {notes.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ol>
+      </div>
+    </section>
   )
 }

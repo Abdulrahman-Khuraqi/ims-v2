@@ -217,16 +217,20 @@
   unicode-bidi: isolate;
 }
 
-/* One short note under the totals, in the paper's plain style. */
+/* Page footer note, pinned to the bottom of the A4 paper; the paper keeps room for it so content never runs under it. */
+.ip {
+  position: relative;
+  padding-bottom: 84px;
+}
 .ip-note {
-  margin-top: 4px;
-  padding-top: 10px;
-  border-top: 1px solid #ccc;
-  font-size: 10px;
+  position: absolute;
+  left: 38px;
+  right: 38px;
+  bottom: 30px;
+  padding-top: 8px;
+  border-top: 1px solid #000;
+  text-align: center;
+  font-size: 9.5px;
   line-height: 1.5;
   color: #333;
-}
-.ip-note strong {
-  font-weight: 700;
-  color: #000;
 }

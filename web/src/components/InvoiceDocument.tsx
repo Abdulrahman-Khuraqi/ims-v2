@@ -183,11 +183,10 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
         </tbody>
       </table>
 
-      <p className="ip-note">
-        Thank you for your business. Services on this invoice are generated based on the payment and may not match the work delivered.
-      </p>
-
       <footer className="ip-footer">{settings?.seal && <img src={settings.seal} alt={`Company Seal - ${company}`} className="ip-seal" />}</footer>
+
+      {/* Page footer: pinned to the bottom edge of the paper. */}
+      <p className="ip-note">Thank you for your business. Services on this invoice are generated based on the payment and may not match the work delivered.</p>
     </div>
   )
 }

@@ -235,8 +235,8 @@
   color: #333;
 }
 
-/* Gift lines (price 0) */
+/* Gift lines (price 0): same plain text as the rest of the line. */
 .ip-gift {
-  font-weight: 600;
-  color: #1f7a4d;
+  font-weight: inherit;
+  color: inherit;
 }

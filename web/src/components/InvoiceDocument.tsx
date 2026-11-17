@@ -39,8 +39,13 @@ function buildPaperData(invoice: Invoice) {
   const rows: PaperRow[] = invoice.lines.length
     ? invoice.lines.map((l) => ({ description: l.name, note: l.line_note || l.description || null, unitPrice: l.unit_price, qty: l.qty, amount: cents(l.unit_price * l.qty), gift: l.unit_price <= 0 }))
     : [{ description: 'Purchase', note: null, unitPrice: invoice.amount, qty: 1, amount: invoice.amount, gift: false }]
-  const linesSum = cents(rows.reduce((s, r) => s + r.amount, 0))
   const total = cents(invoice.amount)
+  // Unit prices are stored to 2 decimals, so 950 ÷ 12 posts sums to 950.04. A rounding gap under half a riyal is
+  // absorbed by the last paid line's amount, so the table adds up to the total and no fake discount appears.
+  const gap = cents(total - rows.reduce((s, r) => s + r.amount, 0))
+  const lastPaid = [...rows].reverse().find((r) => !r.gift)
+  if (lastPaid && gap !== 0 && Math.abs(gap) < 0.5) lastPaid.amount = cents(lastPaid.amount + gap)
+  const linesSum = cents(rows.reduce((s, r) => s + r.amount, 0))
   // Per-unit rounding of a single line can drift by a cent or two; that isn't a discount.
   const subTotal = linesSum - total < 0.02 ? total : linesSum
   return {

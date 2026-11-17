@@ -184,8 +184,7 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
       </table>
 
       <p className="ip-note">
-        <strong>Note:</strong> Services on this invoice are generated based on the payment and may not match the work delivered. All amounts are in
-        Saudi Riyals (SAR); please quote the invoice number in any correspondence.
+        Thank you for your business. Services on this invoice are generated based on the payment and may not match the work delivered.
       </p>
 
       <footer className="ip-footer">{settings?.seal && <img src={settings.seal} alt={`Company Seal - ${company}`} className="ip-seal" />}</footer>

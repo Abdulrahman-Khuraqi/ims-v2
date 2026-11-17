@@ -7,6 +7,7 @@ import { Sheet } from './Sheet'
 import { Button, Spinner, cx } from './ui'
 import { ymd } from '../lib/format'
 import { PROBLEM_LABELS, invoiceProblem, type InvoiceProblem } from '../lib/invoiceCheck'
+import { loadInvoiceSettings } from '../lib/invoiceSettings'
 import type { Invoice, InvoiceList, InvoiceSettings } from '../types'
 
 type Query = Record<string, string | number | boolean | null | undefined>
@@ -66,7 +67,7 @@ export function ExportSheet({ open, onClose, query, total }: { open: boolean; on
     setMode('pdf')
     setBusy('plan')
     try {
-      const [all, s] = await Promise.all([fetchAll(query), api<{ settings: InvoiceSettings[] }>('invoice-settings')])
+      const [all, settings] = await Promise.all([fetchAll(query), loadInvoiceSettings()])
       const ready: Invoice[] = []
       const skipped: PdfPlan['skipped'] = {}
       for (const inv of all) {
@@ -74,7 +75,7 @@ export function ExportSheet({ open, onClose, query, total }: { open: boolean; on
         if (p) skipped[p] = (skipped[p] ?? 0) + 1
         else ready.push(inv)
       }
-      setPlan({ ready, skipped, settings: s.settings })
+      setPlan({ ready, skipped, settings })
     } catch (e) {
       toast(errorMessage(e), 'error')
       setMode(null)

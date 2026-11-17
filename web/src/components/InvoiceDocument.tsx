@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { Invoice, InvoiceSettings } from '../types'
 import { parseDate } from '../lib/format'
 import './invoice-paper.css'
@@ -184,6 +184,25 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
       </table>
 
       <footer className="ip-footer">{settings?.seal && <img src={settings.seal} alt={`Company Seal - ${company}`} className="ip-seal" />}</footer>
+    </div>
+  )
+}
+
+/** The A4 paper shrunk to the width of its container (a phone shows a small but exact page). */
+export function PaperPreview({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(0.45)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setScale(el.clientWidth / A4_WIDTH))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return (
+    // dir=ltr: the paper is English; in the RTL app it would otherwise overflow to the left of its box.
+    <div ref={ref} dir="ltr" className="overflow-hidden rounded-2xl border border-line bg-white shadow-card" style={{ height: A4_HEIGHT * scale }}>
+      <div style={{ width: A4_WIDTH, transform: `scale(${scale})`, transformOrigin: 'top left' }}>{children}</div>
     </div>
   )
 }

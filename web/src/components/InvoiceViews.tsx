@@ -1,9 +1,11 @@
-import { useRef, useState, type ReactNode } from 'react'
-import { AlertCircle, Check, Copy, Pencil, Tag, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { AlertCircle, Check, Copy, Download, FileText, Pencil, Tag, Trash2 } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'
 import { fmtDate, fmtDateTime, money, payLabel } from '../lib/format'
-import type { CatalogItem, Invoice } from '../types'
+import { loadInvoiceSettings } from '../lib/invoiceSettings'
+import type { CatalogItem, Invoice, InvoiceSettings } from '../types'
+import { InvoiceDocument, PaperPreview } from './InvoiceDocument'
 import { useFeedback } from './Feedback'
 import { InvoiceForm } from './InvoiceForm'
 import { ItemPicker } from './ItemPicker'
@@ -237,6 +239,8 @@ export function InvoiceSheet({
             </p>
           </div>
 
+          <InvoicePaperBlock invoice={invoice} />
+
           <div className="mb-4 rounded-3xl border border-line p-4">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-[16px] font-semibold">الخدمة / المنتج</p>
@@ -323,5 +327,69 @@ export function InvoiceSheet({
         </div>
       )}
     </Sheet>
+  )
+}
+
+/** The invoice as it prints: the store's paper template, scaled to the sheet, with a one-invoice PDF download. */
+function InvoicePaperBlock({ invoice }: { invoice: Invoice }) {
+  const { toast } = useFeedback()
+  const [settings, setSettings] = useState<InvoiceSettings[] | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [zoom, setZoom] = useState(false)
+  useEffect(() => {
+    let live = true
+    loadInvoiceSettings()
+      .then((s) => live && setSettings(s))
+      .catch(() => live && setSettings([]))
+    return () => {
+      live = false
+    }
+  }, [])
+  const template = settings?.find((s) => s.store_id === invoice.store_id)
+
+  const download = async () => {
+    setBusy(true)
+    try {
+      const { exportInvoicesPdf } = await import('../lib/pdf')
+      // Latin file name: some browsers drop non-Latin names for generated downloads.
+      const ref = (invoice.invoice_no || invoice.reference_no || String(invoice.id)).replace(/[^A-Za-z0-9._-]+/g, '-')
+      await exportInvoicesPdf([invoice], settings ?? [], `invoice-${ref}.pdf`)
+    } catch (e) {
+      toast(errorMessage(e), 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mb-4">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="flex items-center gap-1.5 text-[16px] font-semibold">
+          <FileText className="size-5 text-muted" /> شكل الفاتورة
+        </p>
+        <Button size="sm" variant="soft" loading={busy} disabled={!settings} icon={<Download className="size-4" />} onClick={download}>
+          تحميل PDF
+        </Button>
+      </div>
+      {settings ? (
+        <button onClick={() => setZoom(true)} className="block w-full text-start" aria-label="تكبير الفاتورة">
+          <PaperPreview>
+            <InvoiceDocument invoice={invoice} settings={template} />
+          </PaperPreview>
+          <span className="mt-1 block text-center text-[12px] text-muted">اضغط للتكبير</span>
+        </button>
+      ) : (
+        <div className="aspect-[794/1123] w-full animate-pulse rounded-2xl bg-surface-2" />
+      )}
+      <Sheet open={zoom} onClose={() => setZoom(false)} title="الفاتورة">
+        {/* Full size: scroll sideways and down to read every line. */}
+        <div dir="ltr" className="-mx-4 overflow-auto bg-surface-2 p-3">
+          <div className="w-[794px] shadow-card">{zoom && <InvoiceDocument invoice={invoice} settings={template} />}</div>
+        </div>
+      </Sheet>
+      {!invoice.lines.length && (
+        <p className="mt-2 text-[13px] text-warn">غير مصنّفة: تظهر في الفاتورة كبند «Purchase» حتى تحدد الخدمة، ولا تدخل في تصدير PDF الجماعي.</p>
+      )}
+    </div>
   )
 }

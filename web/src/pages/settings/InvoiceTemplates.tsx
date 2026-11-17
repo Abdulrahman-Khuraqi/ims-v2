@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Eye, ImagePlus, Trash2 } from 'lucide-react'
 import { api, errorMessage } from '../../api'
 import { useFeedback } from '../../components/Feedback'
-import { A4_WIDTH, InvoiceDocument } from '../../components/InvoiceDocument'
+import { InvoiceDocument, PaperPreview } from '../../components/InvoiceDocument'
+import { invalidateInvoiceSettings } from '../../lib/invoiceSettings'
 import { Page, TopBar } from '../../components/Layout'
 import { Sheet } from '../../components/Sheet'
 import { Button, Card, ColorPicker, Field, Input, PageLoader } from '../../components/ui'
@@ -145,6 +146,7 @@ function TemplateSheet({ settings, onClose, onSaved }: { settings: InvoiceSettin
     setSaving(true)
     try {
       await api(`invoice-settings/${settings.store_id}`, { method: 'PUT', body: { ...f, vat_rate: f.vat_rate || 0 } })
+      invalidateInvoiceSettings()
       toast('تم حفظ قالب الفاتورة')
       onSaved()
     } catch (e) {
@@ -209,30 +211,11 @@ function TemplateSheet({ settings, onClose, onSaved }: { settings: InvoiceSettin
         </div>
       </Sheet>
       <Sheet open={preview} onClose={() => setPreview(false)} title="معاينة الفاتورة">
-        <ScaledPreview>
+        <PaperPreview>
           <InvoiceDocument invoice={sampleInvoice(current)} settings={current} />
-        </ScaledPreview>
+        </PaperPreview>
       </Sheet>
     </>
-  )
-}
-
-/** Shrinks the A4 page to the sheet width. */
-function ScaledPreview({ children }: { children: ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [scale, setScale] = useState(0.45)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const ro = new ResizeObserver(() => setScale(el.clientWidth / A4_WIDTH))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-  return (
-    // dir=ltr: the paper is English; in the RTL app it would otherwise overflow to the left of its box.
-    <div ref={ref} dir="ltr" className="overflow-hidden rounded-2xl border border-line shadow-card" style={{ height: 1123 * scale }}>
-      <div style={{ width: A4_WIDTH, transform: `scale(${scale})`, transformOrigin: 'top left' }}>{children}</div>
-    </div>
   )
 }
 

@@ -217,66 +217,16 @@
   unicode-bidi: isolate;
 }
 
-/* Payment details and notes (added under the totals; same plain, print-safe style as the paper). */
-.ip-info {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-top: 6px;
-  padding-top: 12px;
+/* One short note under the totals, in the paper's plain style. */
+.ip-note {
+  margin-top: 4px;
+  padding-top: 10px;
   border-top: 1px solid #ccc;
-}
-.ip-info h3 {
-  margin-bottom: 6px;
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.ip-pay {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 10px;
-}
-.ip-pay td {
-  padding: 3px 0;
-  vertical-align: top;
-}
-.ip-pay td:first-child {
-  width: 42%;
-  padding-right: 8px;
-  font-weight: 600;
-  color: #333;
-  white-space: nowrap;
-}
-.ip-pay .ip-break {
-  overflow-wrap: anywhere;
-}
-.ip-paid {
-  display: inline-block;
-  padding: 0 6px;
-  border: 1px solid #1f7a4d;
-  border-radius: 3px;
-  color: #1f7a4d;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-.ip-notes {
-  margin: 0;
-  padding-left: 14px;
-  list-style: decimal outside;
-  font-size: 9.5px;
   line-height: 1.5;
-  color: #222;
-}
-.ip-notes li {
-  margin-bottom: 3px;
-}
-.ip-closing {
-  margin-top: 14px;
-  padding-top: 8px;
-  border-top: 1px solid #000;
-  text-align: center;
-  font-size: 9.5px;
   color: #333;
+}
+.ip-note strong {
+  font-weight: 700;
+  color: #000;
 }

@@ -30,13 +30,15 @@ interface PaperRow {
   unitPrice: number
   qty: number
   amount: number
+  /** A line priced 0 is a gift and prints as Complimentary. */
+  gift: boolean
 }
 
 /** The amount paid is always the Total; lines adding up to more show the difference as a Discount. */
 function buildPaperData(invoice: Invoice) {
   const rows: PaperRow[] = invoice.lines.length
-    ? invoice.lines.map((l) => ({ description: l.name, note: l.line_note || l.description || null, unitPrice: l.unit_price, qty: l.qty, amount: cents(l.unit_price * l.qty) }))
-    : [{ description: 'Purchase', note: null, unitPrice: invoice.amount, qty: 1, amount: invoice.amount }]
+    ? invoice.lines.map((l) => ({ description: l.name, note: l.line_note || l.description || null, unitPrice: l.unit_price, qty: l.qty, amount: cents(l.unit_price * l.qty), gift: l.unit_price <= 0 }))
+    : [{ description: 'Purchase', note: null, unitPrice: invoice.amount, qty: 1, amount: invoice.amount, gift: false }]
   const linesSum = cents(rows.reduce((s, r) => s + r.amount, 0))
   const total = cents(invoice.amount)
   // Per-unit rounding of a single line can drift by a cent or two; that isn't a discount.
@@ -133,20 +135,19 @@ export function InvoiceDocument({ invoice, settings }: { invoice: Invoice; setti
           {d.rows.map((r, i) => (
             <tr key={i}>
               <td className="ip-col-desc">
-                <div dir="auto">{r.description}</div>
+                <div dir="auto">
+                  {r.description}
+                  {r.gift && <span className="ip-gift"> (Complimentary)</span>}
+                </div>
                 {r.note && (
                   <div className="ip-item-note" dir="auto">
                     {r.note}
                   </div>
                 )}
               </td>
-              <td className="ip-col-price ip-num">
-                {paperMoney(r.unitPrice)} {CURRENCY}
-              </td>
+              <td className="ip-col-price ip-num">{r.gift ? 'Complimentary' : `${paperMoney(r.unitPrice)} ${CURRENCY}`}</td>
               <td className="ip-col-qty ip-num">{r.qty}</td>
-              <td className="ip-col-amount ip-num">
-                {paperMoney(r.amount)} {CURRENCY}
-              </td>
+              <td className="ip-col-amount ip-num">{r.gift ? 'Complimentary' : `${paperMoney(r.amount)} ${CURRENCY}`}</td>
             </tr>
           ))}
         </tbody>

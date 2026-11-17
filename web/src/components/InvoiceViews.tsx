@@ -23,8 +23,8 @@ export function ItemChips({ invoice, max = 2 }: { invoice: Invoice; max?: number
   const shown = invoice.lines.slice(0, max)
   return (
     <>
-      {shown.map((l) => (
-        <Badge key={l.item_id} tone={l.kind === 'service' ? 'primary' : 'success'}>
+      {shown.map((l, li) => (
+        <Badge key={`${l.item_id}-${li}`} tone={l.kind === 'service' ? 'primary' : 'success'}>
           {l.name}
         </Badge>
       ))}
@@ -252,8 +252,8 @@ export function InvoiceSheet({
             </div>
             {!invoice.lines.length && <p className="rounded-2xl bg-warn-soft px-4 py-3 text-[15px] font-medium text-warn">هذه الفاتورة غير مصنّفة بعد</p>}
             <div className="space-y-1.5">
-              {invoice.lines.map((l) => (
-                <div key={l.item_id} className="flex items-center gap-2 rounded-2xl bg-surface-2 px-3 py-2.5">
+              {invoice.lines.map((l, li) => (
+                <div key={`${l.item_id}-${li}`} className="flex items-center gap-2 rounded-2xl bg-surface-2 px-3 py-2.5">
                   <Badge tone={l.kind === 'service' ? 'primary' : 'success'}>{l.kind === 'service' ? 'خدمة' : 'منتج'}</Badge>
                   <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
                     {l.name}

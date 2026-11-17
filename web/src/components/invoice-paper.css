@@ -234,3 +234,9 @@
   line-height: 1.5;
   color: #333;
 }
+
+/* Gift lines (price 0) */
+.ip-gift {
+  font-weight: 600;
+  color: #1f7a4d;
+}

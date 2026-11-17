@@ -407,8 +407,8 @@ export default function Classify() {
                       {inv.customer_name || 'بدون اسم'}
                     </span>
                     <span className="block space-y-0.5 text-[13px] text-muted">
-                      {inv.lines.map((l) => (
-                        <span key={l.item_id} className="flex justify-between gap-2">
+                      {inv.lines.map((l, li) => (
+                        <span key={`${l.item_id}-${li}`} className="flex justify-between gap-2">
                           <span className="truncate" dir="auto">
                             {l.qty > 1 ? `${l.qty} × ` : ''}
                             {l.name}
@@ -598,8 +598,8 @@ export default function Classify() {
         <div className="mx-auto max-w-2xl">
           {lines.length > 0 ? (
             <div className="mb-3 max-h-52 space-y-1.5 overflow-y-auto">
-              {lines.map((l) => (
-                <div key={l.item_id} className="flex items-center gap-1.5">
+              {lines.map((l, li) => (
+                <div key={`${l.item_id}-${li}`} className="flex items-center gap-1.5">
                   <button aria-label="إزالة" onClick={() => toggle(l.item_id)} className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted">
                     <X className="size-4" />
                   </button>
